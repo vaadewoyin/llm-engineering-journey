@@ -1,5 +1,3 @@
-cat > README.md << 'EOF'
-
 # LLM Engineering Journey
 
 This repository documents my journey learning **Large Language Model (LLM) engineering**, including building models, fine-tuning, retrieval systems, and deployment.
