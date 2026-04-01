@@ -4,13 +4,18 @@ import torch.nn as nn
 
 # Model definition
 class MLP(nn.Module):
-    def __init__(self, input_dim, hidden_dim, output_dim):
+    def __init__(self, input_dim = 54, hidden_dim = [96, 64], output_dim = 7):
         super().__init__()
-        self.fc1= nn.Linear(input_dim, hidden_dim)
-        self.fc2 = nn.Linear(hidden_dim, output_dim)
-        self.relu = nn.ReLU()
+        layers = []
+        current_input_dim = input_dim
+        for h in hidden_dim:
+            layers.append(nn.Linear(current_input_dim, h))
+            layers.append(nn.ReLU())
+            current_input_dim = h
+        layers.append(nn.Linear(current_input_dim, output_dim))
+        self.mlp = nn.Sequential(*layers)
 
     def forward(self, x):
-        x = self.relu(self.fc1(x))
-        x = self.fc2(x)
+        x = self.mlp(x)
         return x
+
