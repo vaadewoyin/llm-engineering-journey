@@ -18,6 +18,10 @@ build/
 .coverage
 htmlcov/
 
+# Windows
+*.identifier
+**/outputs/
+
 # OS
 .DS_Store
 Thumbs.db
