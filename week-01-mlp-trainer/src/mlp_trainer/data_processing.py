@@ -43,10 +43,10 @@ def load_and_preprocess_data(batch_size, seed=45):
     val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False)
     test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False)
 
-    return train_loader, val_loader, test_loader, scaler
+    return train_loader, val_loader, test_loader
 
 
 if __name__ == "__main__":
-    train_loader, val_loader, test_loader, scaler = load_and_preprocess_data(batch_size=32)
+    train_loader, val_loader, test_loader = load_and_preprocess_data(batch_size=32)
     print("Sanity check:", len(train_loader))
 
