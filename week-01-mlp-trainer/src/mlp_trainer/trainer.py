@@ -53,7 +53,7 @@ def evaluate(model, data_loader, accuracy_metric, device):
 
 # Model training
 def train_model(train_loader, val_loader, test_loader, device, epochs,
-                model, optimizer, scheduler = None):
+                model, optimizer, use_scheduler = True):
 
     # Initialize accuracy metric
     train_accuracy = Accuracy(task='multiclass', num_classes=7).to(device)
@@ -62,8 +62,9 @@ def train_model(train_loader, val_loader, test_loader, device, epochs,
     # Store metrics for visualization
     train_losses, train_accs = [], []
     val_losses, val_accs = [], []
-    # Instatiate learning rate scheduler
-    scheduler = ReduceLROnPlateau(optimizer, mode='min', factor=0.5, patience=3)
+    scheduler = None
+    if use_scheduler:
+        scheduler = ReduceLROnPlateau(optimizer, mode='min', factor=0.5, patience=3)
     # Training loop
     for epoch in range(epochs):
         train_loss, train_acc = train_one_epoch(model, train_loader, optimizer, train_accuracy, device)

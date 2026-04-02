@@ -16,7 +16,7 @@ def train(
     lr: float = typer.Option(1e-1, help = "Learning rate for optimizer"),
     hidden_dim: list[int] = typer.Option([2], help = "Hidden layer sizes"),
     optimizer: str = typer.Option("sgd", help = "Optimizer: sgd or adam"),
-    lr_scheduler: bool = typer.Option(False, help = "Whether to use learning rate scheduler (ReduceLROnPlateau) "),
+    use_scheduler: bool = typer.Option(False, help = "Whether to use learning rate scheduler (ReduceLROnPlateau) "),
     seed: int = typer.Option(45, help = "Random seed for reproducibility")
     ):
 
@@ -30,7 +30,7 @@ def train(
     else:
         raise typer.BadParameter(f"Unknown paramter: {optimizer}")
 
-    train_losses, train_accs, val_losses, val_accs = train_model(train_loader, val_loader, test_loader,  device, epochs, model, opt, lr_scheduler)
+    train_losses, train_accs, val_losses, val_accs = train_model(train_loader, val_loader, test_loader,  device, epochs, model, opt, use_scheduler=use_scheduler)
 
     # Save learning curve to /output
     save_training_curve_plot(train_losses, train_accs, val_losses, val_accs)
