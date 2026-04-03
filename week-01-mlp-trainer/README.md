@@ -1,6 +1,6 @@
 # Forest Cover Classifier
 
-### PyTorch MLP · CoverType Dataset · 91.9% Accuracy
+### PyTorch MLP · CoverType Dataset · 94.2% Accuracy
 
 [![Python 3.12+](https://img.shields.io/badge/python-3.12+-blue.svg)](...)
 [![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](...)
@@ -46,7 +46,7 @@ A two‑layer MLP with decreasing hidden sizes (128 → 96), a common pattern - 
 
 **2. Stratified split ensures reliable evaluation and helps model generalisation**
 
-**3. Standard scaling was essential for proper convergence as features were on different scales**
+**3. Standard scaling was essential for proper convergence because features were on different scales**
 
 ## Usage
 
@@ -60,7 +60,9 @@ uv sync
 
 # 3.Run training
 uv run mlp-trainer # for default parameters
-uv run mlp-trainer  --epochs 20 --hidden-dim 128 -- hidden-dim 96 # custom run example ( 20 epochs, hidden sizes - [128, 96])
+
+# Custom run (20 epochs, two hidden layers [128, 96])
+uv run mlp-trainer  --epochs 20 --hidden-dim 128 -- hidden-dim 96
 ```
 
 ## What I'd do next
