@@ -7,7 +7,25 @@ from transformers import AutoTokenizer
 from torch.utils.data import DataLoader
 
 class TextClassificationData:
+    """
+    Data handling class for text classification task using Hugging Face datasets, tokenizers, and PyTorch DataLoader.
+    This class loads a specified dataset and prepares it for training, validation, and testing with a PyTorch DataLoader.
+    Args:
+        dataset_name (str): name of the Hugging Face dataset to load.
+        model_name (str): name of the Hugging Face model to use for tokenization.
+        batch_size (int): batch size for DataLoader.
+        max_length (int): maximum sequence length for tokenization.
+        seed (int): random seed for reproducibility.
+    """
     def __init__(self, dataset_name, model_name, batch_size=32, max_length=128, seed=42) -> None:
+        """
+        Initialize the TextClassificationData class.
+            dataset_name (str: name of the Hugging Face dataset to load.
+            model_name (str): name of the Hugging Face model to use for tokenization.
+            batch_size (int, optional): batch size for dataloader. Defaults to 32.
+            max_length (int, optional): context length (sequence length). Defaults to 128.
+            seed (int, optional): random seed for reproducibility. Defaults to 42.
+        """
         self.dataset_name = dataset_name
         self.model_name = model_name
         self.batch_size = batch_size
@@ -16,15 +34,24 @@ class TextClassificationData:
         self.tokenizer = AutoTokenizer.from_pretrained(self.model_name)
 
     def tokenize_function(self, examples: dict) -> dict:
+        """
+        Tokenize the input text using the specified tokenizer.
+        """
         return self.tokenizer(examples['text'], max_length=self.max_length,
                                 padding='max_length',truncation=True)
 
     def get_dataset(self) -> Tuple[DatasetDict, list]:
+        """
+        Downloads dataset and returns dataset, label names
+        """
         dataset = load_dataset(self.dataset_name)
         label_names = dataset['train'].features['label'].names
         return dataset, label_names
 
     def get_dataloader(self) -> Tuple[DataLoader, DataLoader, DataLoader, list]:
+        """
+        Prepares and returns DataLoaders for training, validation, and testing, along with label names.
+        """
         dataset, label_names = self.get_dataset()
         # Tokenize dataset
         tokenized_datasets = dataset.map(self.tokenize_function, batched=True,
