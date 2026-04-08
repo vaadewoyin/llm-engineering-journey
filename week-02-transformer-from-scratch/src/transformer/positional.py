@@ -31,6 +31,6 @@ class PositionalEncoding(nn.Module):
         Returns:
             torch.Tensor: positionally encoded tensor of shape (batch_size, seq_len, emb_dim)
         """
-        pos_embedding = self.pos_embedding_layer(torch.arange(x.size(1)), device=x.device)
+        pos_embedding = self.pos_embedding_layer(torch.arange(x.size(1), device=x.device))
         return x + pos_embedding
 
