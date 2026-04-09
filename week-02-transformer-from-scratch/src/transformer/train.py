@@ -11,7 +11,9 @@ from torch.optim.lr_scheduler import ReduceLROnPlateau
 from torchmetrics import Accuracy
 from torch.utils.data import DataLoader
 from torch.optim import Optimizer
-from torchmetrics import Metric
+from typing import Tuple
+from classifier import TransformerClassifier
+from data import TextClassificationData
 
 # Reproducibilty
 def set_seed(seed: int) -> None:
@@ -25,11 +27,9 @@ def set_seed(seed: int) -> None:
     torch.backends.cudnn.deterministic = True
     torch.backends.cudnn.benchmark = False
 
-set_seed(45)
-
 # Train one epoch
 def train_one_epoch(model: nn.Module, data_loader: DataLoader, optimizer: Optimizer,
-                    accuracy_metric: Metric, device: torch.device) -> tuple[float, float]:
+                    accuracy_metric: Accuracy, device: torch.device) -> Tuple[float, float]:
     """ Trains the model for one epoch on the given data loader and returns loss and accuracy """
     model.train()
     epoch_loss = 0
@@ -37,7 +37,7 @@ def train_one_epoch(model: nn.Module, data_loader: DataLoader, optimizer: Optimi
     for items in data_loader:
         input = items['input_ids']
         target = items['label']
-        mask = items['attention_mask'].bool()
+        mask = ~(items['attention_mask'].bool().to(device))  # hugging face has 1 as real token
         input, target = input.to(device), target.to(device)
 
         # Forward
@@ -59,7 +59,7 @@ def train_one_epoch(model: nn.Module, data_loader: DataLoader, optimizer: Optimi
 
 # Evaluate model on validation/test set
 def evaluate(model: nn.Module, data_loader: DataLoader,
-             accuracy_metric: Metric, device: torch.device) -> tuple[float, float]:
+             accuracy_metric: Accuracy, device: torch.device) -> Tuple[float, float]:
     """ Evaluates the model on the given data loader and returns loss and accuracy """
     model.eval()
     accuracy_metric.reset()
@@ -68,7 +68,7 @@ def evaluate(model: nn.Module, data_loader: DataLoader,
         for items in data_loader:
             input = items['input_ids']
             target = items['label']
-            mask = items['attention_mask'].bool()
+            mask = ~(items['attention_mask'].bool().to(device))
             input, target = input.to(device), target.to(device)
             logits = model(input, key_padding_mask=mask)
             preds = torch.argmax(logits, dim=1)
@@ -101,16 +101,16 @@ def train_model(train_loader: DataLoader, val_loader: DataLoader, test_loader: D
     """
 
     # Initialize accuracy metric
-    train_accuracy = Accuracy(task='multiclass', num_classes=7).to(device)
-    val_accuracy = Accuracy(task='multiclass', num_classes=7).to(device)
-    test_accuracy = Accuracy(task='multiclass', num_classes=7).to(device)
+    train_accuracy = Accuracy(task='multiclass', num_classes=4).to(device)
+    val_accuracy = Accuracy(task='multiclass', num_classes=4).to(device)
+    test_accuracy = Accuracy(task='multiclass', num_classes=4).to(device)
     # Store metrics for visualization
     train_losses, train_accs = [], []
     val_losses, val_accs = [], []
-    scheduler = None
     if use_scheduler:
-        scheduler = ReduceLROnPlateau(optimizer, mode='min', factor=0.5, patience=3)
-    # Training loop
+        scheduler = ReduceLROnPlateau(optimizer, mode='min', factor=0.5, patience=2)
+    else:
+        scheduler = None
     for epoch in range(epochs):
         train_loss, train_acc = train_one_epoch(model, train_loader, optimizer, train_accuracy, device)
         val_loss, val_acc = evaluate(model, val_loader, val_accuracy, device)
@@ -123,7 +123,7 @@ def train_model(train_loader: DataLoader, val_loader: DataLoader, test_loader: D
         train_accs.append(train_acc)
         val_accs.append(val_acc)
 
-        if (epoch % 5 == 0) or (epoch == epochs -1):
+        if (epoch % 3 == 0) or (epoch == epochs -1):
             print(f'Epoch {epoch+1:03d} | Train Loss: {train_loss:.4f} | Val Loss: {val_loss:.4f} | '
                 f'Train Acc: {train_acc * 100:.3f}% | Val Acc: {val_acc * 100:.3f}%')
 
@@ -162,4 +162,27 @@ def save_training_curve_plot(train_losses, train_accs, val_losses, val_accs):
     plt.savefig(run_dir/ "learning_curve.png", dpi=300, bbox_inches='tight')
     print(f"Plot saved to {run_dir}")
     plt.close()
+
+if __name__ == "__main__":
+    # Load data, train, evaluate model & plot
+    set_seed(45)
+    ag_news_data = TextClassificationData(dataset_name="ag_news", model_name='bert-base-uncased')
+    train_loader, val_loader, test_loader, label_names = ag_news_data.get_dataloader()
+    print(f"Label names: {label_names}")
+    print(f"Number of batches in train loader: {len(train_loader)}")
+    print(f"Number of batches in val loader: {len(val_loader)}")
+    print(f"Number of batches in test loader: {len(test_loader)}")
+
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    model = TransformerClassifier(vocab_size =30522, context_len=128, emb_dim=128, num_heads=4,
+                                  dropout=0.4, ffn_hidden_dim= (4 * 128), num_layers=4, num_outputs=4).to(device)
+    optimizer = torch.optim.AdamW(model.parameters(), lr = 1e-3, weight_decay=0.1)
+    num_epoch = 15
+
+    print(f"\nTraining on {device} with batch size {ag_news_data.batch_size} for {num_epoch} epochs")
+    train_losses, train_accs, val_losses, val_accs = train_model(train_loader=train_loader, val_loader=val_loader, test_loader=test_loader, device=device, epochs=num_epoch, model=model,optimizer=optimizer, use_scheduler=False)
+
+    # Plot and save learning curves
+    save_training_curve_plot(train_losses=train_losses, train_accs=train_accs,
+                             val_losses=val_losses, val_accs=val_accs)
 
