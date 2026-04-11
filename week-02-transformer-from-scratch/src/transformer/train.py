@@ -8,12 +8,12 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torch.optim.lr_scheduler import ReduceLROnPlateau
-from torchmetrics import Accuracy
+from torchmetrics import Accuracy, Metric
 from torch.utils.data import DataLoader
 from torch.optim import Optimizer
 from typing import Tuple
-from classifier import TransformerClassifier
-from data import TextClassificationData
+from transformer.classifier import TransformerClassifier
+from transformer.data import TextClassificationData
 
 # Reproducibilty
 def set_seed(seed: int) -> None:
@@ -29,7 +29,7 @@ def set_seed(seed: int) -> None:
 
 # Train one epoch
 def train_one_epoch(model: nn.Module, data_loader: DataLoader, optimizer: Optimizer,
-                    accuracy_metric: Accuracy, device: torch.device) -> Tuple[float, float]:
+                    accuracy_metric: Metric, device: torch.device) -> Tuple[float, float]:
     """ Trains the model for one epoch on the given data loader and returns loss and accuracy """
     model.train()
     epoch_loss = 0
@@ -59,7 +59,7 @@ def train_one_epoch(model: nn.Module, data_loader: DataLoader, optimizer: Optimi
 
 # Evaluate model on validation/test set
 def evaluate(model: nn.Module, data_loader: DataLoader,
-             accuracy_metric: Accuracy, device: torch.device) -> Tuple[float, float]:
+             accuracy_metric: Metric, device: torch.device) -> Tuple[float, float]:
     """ Evaluates the model on the given data loader and returns loss and accuracy """
     model.eval()
     accuracy_metric.reset()
