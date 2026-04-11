@@ -75,7 +75,6 @@ week-02-transformer-from-scratch/
 │ ├── test_attention.py
 │ └── test_encoder_positional.py
 ├── outputs/ # generated plots (gitignored)
-├── configs/ # optional hyperparameter configs
 ├── pyproject.toml
 ├── uv.lock
 └── README.md
