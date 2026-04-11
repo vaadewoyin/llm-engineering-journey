@@ -1,7 +1,7 @@
 # Imports
 import torch
 import torch.nn as nn
-from attention import MultiHeadAttention
+from transformer.attention import MultiHeadAttention
 from typing import Optional
 
 
