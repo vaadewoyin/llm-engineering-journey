@@ -22,11 +22,12 @@ This repository documents a structured 13-week journey into LLM engineering, foc
 
 ## 📊 Projects (13 weeks)
 
-| Week | Project                  | Key Skills / Focus                                                                |
-| ---- | ------------------------ | --------------------------------------------------------------------------------- |
-| 1    | MLP Trainer              | PyTorch training loop, Typer CLI, reproducibility, 94% accuracy on CoverType      |
-| 2    | Transformer From Scratch | Scaled dot-product attention, multi-head, positional encoding, character-level LM |
-| …    | …                        | …                                 |
+| Week | Project                  | Key Skills / Focus                                                                         |
+| ---- | ------------------------ | ------------------------------------------------------------------------------------------ |
+| 1    | MLP Trainer              | PyTorch training loop, Typer CLI, reproducibility, 94% accuracy on CoverType               |
+| 2    | Transformer From Scratch | Scaled dot‑product attention, multi‑head, positional encoding, sentence classification     |
+| 3    | LLM Inference CLI        | Hugging Face pipelines, streaming generation, `--compare` flag, token efficiency benchmark |
+| …    | …                        | …                                                                                          |
 
 ---
 
