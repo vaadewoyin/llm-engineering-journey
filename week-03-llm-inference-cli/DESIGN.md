@@ -54,7 +54,9 @@ tests: `test_cli.py / test_config.py` — for running unit tests.
 
 ### Human inspection point
 *[Where can a human look to see exactly what the system did?]*
-The CLI app outputs which include tokens/second printed after every generation, Rich comparison table showing responses side by side, other parameters like total time taken for generation etc.
+
+The CLI app outputs - includes tokens/second printed after every generation, Rich comparison table showing responses (and performance metrics) side.
+
 Config JSON saved to disk to see used configuration.
 
 ### State representation
@@ -65,14 +67,14 @@ The configs are stored in a JSON file that can be inspected. Also, model info an
 ### Serial vs parallel
 *[Default is serial. If anything is parallel, justify it explicitly here.]*
 
-Serial processing: model 1 runs completely before model 2 runs, then comparison is done. Running both in parallel will cause OOM error.
+Serial processing: model 1 runs completely before model 2 runs, then comparison is done. Running both in parallel can cause OOM error.
 
 ## 7. Pre-Build Questions
 *[Answer every project-specific question here before writing code.]*
 
-**Q:** [Why does config.py need to be a separate file? What breaks if GenerationConfig lives in cli.py?]
+**Q:** [Why does config.py need to be a separate file? What breaks if Config file lives in cli.py?]
 
-**A:** [config.py will be imported by generate.py and compare.py, both will also be imported by cli.py. But if GenerationConfig lives in cli.py, it means both generate.py and compare.py will import cli.py, which pulls Typer and all logic in cli just to call the config dataclass. Also this will lead to circular imports when cli in turn calls generate and compare.py.]
+**A:** [config.py will be imported by generate.py and compare.py, both will also be imported by cli.py. But if Config file lives in cli.py, it means both generate.py and compare.py will import cli.py, which pulls Typer and all logic in cli just to call the config dataclass. Also this will lead to circular imports when cli in turn calls generate and compare.py.]
 
 **Q:** [A user types a model ID that doesn't exist on HuggingFace. What happens right now? What should happen?]
 
