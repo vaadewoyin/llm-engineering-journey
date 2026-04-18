@@ -24,8 +24,8 @@ class SaveAndLoadConfig():
         self.CONFIG_DIR = PROJECT_ROOT / "configs"
         self.CONFIG_DIR.mkdir(exist_ok=True)
 
-    def save_json(self) -> None:
-        with open(f"{self.CONFIG_DIR}/config.json", "w") as  f:
+    def save_json(self, file_name: str) -> None:
+        with open(f"{self.CONFIG_DIR}/{file_name}.json", "w") as  f:
                 json.dump(asdict(self.config), f, indent =2)
     
     def load_json(self, file_name: str) -> GenConfig:
@@ -36,6 +36,6 @@ class SaveAndLoadConfig():
 # Check that config can be saved and loaded properly
 if __name__ == "__main__":
     save_and_load = SaveAndLoadConfig(GenConfig())
-    save_and_load.save_json()
-    config = save_and_load.load_json("config")
+    save_and_load.save_json("default_config")
+    config = save_and_load.load_json("default_config")
     print(config)
