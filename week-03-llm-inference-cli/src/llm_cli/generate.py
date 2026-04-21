@@ -28,21 +28,24 @@ class GenerationEngine():
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
         self.dtype = torch.float16 if self.device == 'cuda' else torch.float32
         try:
+            # Load tokenizer (may fail if wrong model ID)
             self.tokenizer = AutoTokenizer.from_pretrained(self.config.model_id)
-            if self.tokenizer.chat_template is not None:
-               self.model = AutoModelForCausalLM.from_pretrained(self.config.model_id, device_map = "auto",
-                                                                 dtype = self.dtype)
-            else:
-              self.model = None
-              raise ModelNotInstructionTunedError('Load a huggingface instruction-tuned model')
 
-        except ModelNotInstructionTunedError as e:
-            print(e)
-            raise
+            # Check instruction-tuning requirement
+            if self.tokenizer.chat_template is None:
+                raise ModelNotInstructionTunedError(
+                    f"Model '{self.config.model_id}' is not instruction‑tuned. "
+                    "Only instruction‑tuned models (with a chat template) are allowed.")
 
-        except OSError:
-            print(f'Error: Model {self.config.model_id} not found. Check the model ID at huggingface.co/models.')
+            # Load model (may fail if wrong model ID)
+            self.model = AutoModelForCausalLM.from_pretrained(self.config.model_id, 
+                                                              device_map=self.device, dtype=self.dtype)
+
+        except ModelNotInstructionTunedError:
             raise
+    
+        except Exception as e:
+            raise RuntimeError(f"Failed to load model '{self.config.model_id}'. Reason: {e}") from None
         
     def generate(self, prompt) -> Optional[Dict[str, Any]]:
         """Generates text based on the prompt and system message in the config using 
@@ -58,8 +61,7 @@ class GenerationEngine():
         
         if self.model is not None:
             inputs = self.tokenizer.apply_chat_template(messages, tokenize=True, 
-                                              return_tensors="pt", add_generation_prompt=True)
-            input_ids=inputs.to(self.device)
+                                              return_tensors="pt", add_generation_prompt=True).to(self.device)
 
             if self.config.streamer:
                 streamer = TextStreamer(self.tokenizer, skip_prompt=True, skip_special_tokens=True)
@@ -68,12 +70,13 @@ class GenerationEngine():
 
             token_gen_start_time = time.perf_counter() #why: time.perf_counter is better for timing performance
             with torch.no_grad():
-                outputs = self.model.generate(input_ids, streamer=streamer, 
+                outputs = self.model.generate(inputs.input_ids, streamer=streamer, 
                                               do_sample=self.config.do_sample,
                                               temperature=self.config.temperature, 
                                               top_p=self.config.top_p, 
                                               max_new_tokens=self.config.max_new_tokens, 
-                                              repetition_penalty=self.config.repetition_penalty
+                                              repetition_penalty=self.config.repetition_penalty,
+                                              attention_mask=inputs.attention_mask
                                               )
               
             token_gen_end_time = time.perf_counter()
@@ -84,7 +87,7 @@ class GenerationEngine():
             tokens_per_sec = num_output_tokens / tokens_gen_time 
             return {"model":self.config.model_id, "outputs":outputs, "tokens_per_sec":tokens_per_sec}
 
-# Check that config was properly imported
+# Check generation engine
 if __name__ == "__main__":
-    config = GenConfig()
-    print(type(config))
+    gen_engine = GenerationEngine(GenConfig())
+    result = gen_engine.generate("What is the capital of France?")
