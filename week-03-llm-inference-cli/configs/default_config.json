@@ -1,10 +1,10 @@
 {
-  "model_id": "HuggingFaceTB/SmolLM2-135M-Instruct",
-  "system_prompt": "You are a helpful assistant.",
-  "streamer": true,
-  "do_sample": true,
-  "temperature": 0.7,
-  "top_p": 0.8,
-  "max_new_tokens": 256,
-  "repetition_penalty": 1.25
+    "model_id": "HuggingFaceTB/SmolLM2-135M-Instruct",
+    "system_prompt": "You are a helpful assistant. Provide a direct, final answer. Do NOT ask any questions, request clarification, or suggest follow‑up actions. End your response after giving the answer.",
+    "streamer": true,
+    "do_sample": true,
+    "temperature": 0.7,
+    "top_p": 0.8,
+    "max_new_tokens": 100,
+    "repetition_penalty": 1.25
 }
