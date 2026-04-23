@@ -1,23 +1,25 @@
-# Imports
+"""Compares the generation outputs of two models given a prompt."""
+
 import torch
-from llm_cli.config import GenConfig#, SaveAndLoadConfig
+from llm_cli.config import GenConfig
 from llm_cli.generate import GenerationEngine
-#from typing import Optional, Dict, Any
 
 
 def compare_models(model_id1: str, model_id2: str, prompt: str) -> dict: 
-    """ Compares the generation outputs and tokens per second of two models given a prompt."""
-    # Model 1
-    engine_1 = GenerationEngine(GenConfig(model_id=model_id1))
+    """ Compares the generation outputs of two models given a prompt."""
+
+    # Model 1:
+    # Why: streamer not needed in compare, outputs will be properly displayed with rich
+    engine_1 = GenerationEngine(GenConfig(model_id=model_id1, streamer=False)) 
     output_1 = engine_1.generate(prompt)
-    # Clear memory to avoid OOM error
+
+    # Why: Clear memory to avoid OOM error, to allow working with two models in limited memory environment
     del engine_1
     torch.cuda.empty_cache()
     
-    # Model 2
-    engine_2 = GenerationEngine(GenConfig(model_id=model_id2))
+    # Model 2:
+    engine_2 = GenerationEngine(GenConfig(model_id=model_id2, streamer=False))
     output_2 = engine_2.generate(prompt)
-    # Clear memory to avoid OOM error
     del engine_2
     torch.cuda.empty_cache()
 
@@ -28,3 +30,9 @@ def compare_models(model_id1: str, model_id2: str, prompt: str) -> dict:
         }
 
  
+ # Check model comparison
+if __name__ == "__main__":
+    model_id_1 = "HuggingFaceTB/SmolLM2-135M-Instruct"
+    model_id_2 =  "Qwen/Qwen2-0.5B-Instruct"
+    prompt = "Explain fine‑tuning in machine learning in one sentence."
+    comparison_result = compare_models(model_id_1, model_id_2, prompt)
