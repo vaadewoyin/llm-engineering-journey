@@ -18,7 +18,7 @@ tests: `test_cli.py / test_config.py` — for running unit tests.
 ## 3. Component Communication
 *[How do the components talk to each other? What calls what? What data flows where?]*
 
-`generate.py` imports `config.py`, uses the configs to generate text from model and returns generated text, and other parameters like tokens/sec, number of generated tokens, time taken for generation etc. These parameters are used for comparison. `compare.py` imports `generate.py` and uses it in generating text for both models and also returns performance metrics for both models for purpose of comparison. `cli.py` imports `config.py`, `generate.py`, and `compare.py` for creating the Typer based CLI app. There are two functions, one for generate and another for compare depending on the function called on the command line.
+`generate.py` imports `config.py`, uses the configs to generate text from model and returns generated text, and other parameters like tokens/sec, number of generated tokens, time taken for generation etc. These parameters are used for comparison. `compare.py` imports `generate.py` and uses it in generating text for both models and also returns performance metrics for both models for purpose of comparison. `cli.py` imports `config.py`, `generate.py`, and `compare.py` for creating the Typer based CLI app. There are two commands, one for generate and another for compare depending on the command invoked on the command line.
 
 ## 4. Failure Modes
 *[The three most likely ways this breaks in real use. Not edge cases — the most probable failures.]*
@@ -55,7 +55,7 @@ tests: `test_cli.py / test_config.py` — for running unit tests.
 ### Human inspection point
 *[Where can a human look to see exactly what the system did?]*
 
-The CLI app outputs - includes tokens/second printed after every generation, Rich comparison table showing responses (and performance metrics) side.
+The CLI app outputs - includes tokens/second printed after every generation, Rich comparison table showing responses (and performance metrics).
 
 Config JSON saved to disk to see used configuration.
 
@@ -90,7 +90,7 @@ Serial processing: model 1 runs completely before model 2 runs, then comparison 
 
 **Q:** [Why does message order in the messages list matter? What breaks if system and user are swapped?]
 
-**A:** [Message order matters because the system role tells the model how to behave in order to fulfill the user's request or instruction. So the system message must come before the user role. This order is maintained to avoid errors, and also to prevent the model from generating rubbish (which is worse than a crash). The end user has no business with message order since they are only entering a prompt via the CLI, the logic about message order is hidden from end user.]
+**A:** [Message order matters because the system role tells the model how to behave in order to fulfill the user's request or instruction. So, the system message must come before the user role. This order is maintained to avoid errors, and also to prevent the model from generating rubbish (which is worse than a crash). The end user has no business with message order since they are only entering a prompt via the CLI, the logic about message order is hidden from end user.]
 
 ## 8. Known Limitations
 *[What does this system not handle? What would break it that you are aware of right now?]*
