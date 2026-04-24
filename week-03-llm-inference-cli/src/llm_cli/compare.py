@@ -30,9 +30,3 @@ def compare_models(model_id1: str, model_id2: str, prompt: str) -> dict:
         }
 
  
- # Check model comparison
-if __name__ == "__main__":
-    model_id_1 = "HuggingFaceTB/SmolLM2-135M-Instruct"
-    model_id_2 =  "Qwen/Qwen2-0.5B-Instruct"
-    prompt = "Explain fine‑tuning in machine learning in one sentence."
-    comparison_result = compare_models(model_id_1, model_id_2, prompt)
