@@ -1,4 +1,5 @@
-# Imports
+"""CLI for LLM inference and comparison."""
+
 import typer
 from rich.console import Console
 from rich.table import Table
@@ -9,11 +10,11 @@ from llm_cli.compare import compare_models
 app = typer.Typer()
 console = Console()
 
-# Cli command to generate text from a model
+# CLI command to generate text from a model
 @app.command()
 def run(config_file: str = typer.Option(None, help= "config file to use"), 
              model_id: str = typer.Option(None, help="ID of the model to use"),
-             prompt: str = typer.Option("What is the capital of France?", help = "prompt for text generation"),
+             prompt: str = typer.Option("Explain fine‑tuning in machine learning in one sentence.", help = "prompt for text generation"),
              streamer: bool = typer.Option(True, help="Whether to use streaming output"),
              do_sample: bool = typer.Option(True, help="Whether to use sampling for generation"),
              temperature: float = typer.Option(0.7, help="Temperature for sampling"),
@@ -22,35 +23,55 @@ def run(config_file: str = typer.Option(None, help= "config file to use"),
              repetition_penalty: float = typer.Option(1.25, help="Repetition penalty for generation")
              ):
     
+    # Why: If config_file is provided, load config from file and ignore other CLI args (with a warning).
+    # If config file is not provided, use CLI args if provided, otherwise use defaults. 
     if config_file is not None:
         cfg = load_gen_config(config_file)
         console.print(f"\nUsing config from: {config_file}\n{cfg}")
         gen_engine = GenerationEngine(cfg)
+
     else:
-        gen_cfg = GenConfig() # default config
-        if model_id is not None or streamer is not True or do_sample is not True or temperature != 0.7 or top_p != 0.8 or max_new_tokens != 100 or repetition_penalty != 1.25:
+        defaults = GenConfig()  
+        
+        # Why: If any CLI arg is provided, override the corresponding field in the config.
+        if (model_id is not None or
+            streamer != defaults.streamer or
+            do_sample != defaults.do_sample or
+            temperature != defaults.temperature or
+            top_p != defaults.top_p or
+            max_new_tokens != defaults.max_new_tokens or
+            repetition_penalty != defaults.repetition_penalty): 
+
             if model_id is None:
-                model_id = gen_cfg.model_id
+                model_id = defaults.model_id
+
             cfg = GenConfig(model_id=model_id, streamer=streamer, do_sample=do_sample, temperature=temperature, 
                             top_p=top_p, max_new_tokens=max_new_tokens, repetition_penalty=repetition_penalty)
             console.print(f"\nUsing config from command line arguments:\n{cfg}")
+
         else:
-            cfg = gen_cfg
+            cfg = defaults
             console.print("\nUsing default configuration:")
             console.print()
 
         gen_engine = GenerationEngine(cfg) 
 
-    gen_engine.generate(prompt)
+    # Generate text based on the prompt and configuration
+    result = gen_engine.generate(prompt)
+
+    if streamer is False:
+        console.print(f"\nOutputs: {result['tokenizer'].decode(result['outputs'], skip_special_tokens=True)}")
+
 
     
-# Cli command to compare two models
+# CLI command to compare two models
 @app.command()
 def compare(
     model_id1: str = typer.Option(..., help="ID of the first model to compare"), 
     model_id2: str = typer.Option(..., help="ID of the second model to compare"), 
-    prompt: str = typer.Option("What is the capital of France?", help="Prompt for generation")
-):
+    prompt: str = typer.Option("Explain fine‑tuning in machine learning in one sentence.", help="Prompt for generation")
+    ):
+
     comparison_result = compare_models(model_id1, model_id2, prompt)
     console.print(f"\nComparison of models '{model_id1}' and '{model_id2}' for prompt: '{prompt}'\n")
    
@@ -78,6 +99,7 @@ def compare(
     ]
     
     console.print('\n')
+
     # Rich table for comparison
     table = Table(title="Model Comparison")
     table.add_column("Model", justify="left", style="cyan", no_wrap=True)
@@ -89,4 +111,5 @@ def compare(
         table.add_row(result["Model"], str(result["Tokens Generated"]), f"{result['Generation Time (s)']:.2f}", 
                       f"{result['Tokens/sec']:.2f}")
     
+    # Display table with rich
     console.print(table)
