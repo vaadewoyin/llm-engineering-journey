@@ -12,7 +12,7 @@ console = Console()
 
 # CLI command to generate text from a model
 @app.command()
-def run(config_file: str = typer.Option(None, help= "config file to use"), 
+def generate(config_file: str = typer.Option(None, help= "config file to use"), 
              model_id: str = typer.Option(None, help="ID of the model to use"),
              prompt: str = typer.Option("Explain fine‑tuning in machine learning in one sentence.", help = "prompt for text generation"),
              streamer: bool = typer.Option(True, help="Whether to use streaming output"),
