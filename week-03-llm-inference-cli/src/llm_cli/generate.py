@@ -105,9 +105,7 @@ class GenerationEngine():
             tokens_gen_time = token_gen_end_time - token_gen_start_time
             tokens_per_sec = num_output_tokens / tokens_gen_time 
 
-            if streamer is None:
-                print(f"\nOutputs: {self.tokenizer.decode(outputs, skip_special_tokens=True)}")
-
+            
             return {
                 "model":self.config.model_id, 
                 "outputs":outputs, 
