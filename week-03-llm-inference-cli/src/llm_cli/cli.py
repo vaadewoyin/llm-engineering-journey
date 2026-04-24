@@ -4,7 +4,7 @@ import typer
 from rich.console import Console
 from rich.table import Table
 from llm_cli.config import GenConfig, load_gen_config
-from llm_cli.generate import GenerationEngine
+from llm_cli.generate import GenerationEngine, ModelNotInstructionTunedError
 from llm_cli.compare import compare_models
 
 app = typer.Typer()
@@ -26,9 +26,14 @@ def generate(config_file: str = typer.Option(None, help= "config file to use"),
     # Why: If config_file is provided, load config from file and ignore other CLI args (with a warning).
     # If config file is not provided, use CLI args if provided, otherwise use defaults. 
     if config_file is not None:
-        cfg = load_gen_config(config_file)
-        console.print(f"\nUsing config from: {config_file}\n{cfg}")
-        gen_engine = GenerationEngine(cfg)
+        try:
+            cfg = load_gen_config(config_file)
+            console.print(f"\nUsing config from: {config_file}\n{cfg}")
+        except FileNotFoundError as e:
+            console.print(f"\n[red]Error:[/red] {e}") 
+            raise typer.Exit(code=1)
+
+        #gen_engine = GenerationEngine(cfg)
 
     else:
         defaults = GenConfig()  
@@ -53,11 +58,15 @@ def generate(config_file: str = typer.Option(None, help= "config file to use"),
             cfg = defaults
             console.print("\nUsing default configuration:")
             console.print()
-
-        gen_engine = GenerationEngine(cfg) 
+    try:
+        gen_engine = GenerationEngine(cfg)
+        result = gen_engine.generate(prompt)
+    except (RuntimeError, ModelNotInstructionTunedError) as e:
+        console.print(f"\n[red]Error:[/red] {e}") 
+        raise typer.Exit(code=1)
 
     # Generate text based on the prompt and configuration
-    result = gen_engine.generate(prompt)
+    #result = gen_engine.generate(prompt)
 
     if streamer is False:
         console.print(f"\nOutputs: {result['tokenizer'].decode(result['outputs'], skip_special_tokens=True)}")
@@ -71,9 +80,12 @@ def compare(
     model_id2: str = typer.Option(..., help="ID of the second model to compare"), 
     prompt: str = typer.Option("Explain fine‑tuning in machine learning in one sentence.", help="Prompt for generation")
     ):
-
-    comparison_result = compare_models(model_id1, model_id2, prompt)
-    console.print(f"\nComparison of models '{model_id1}' and '{model_id2}' for prompt: '{prompt}'\n")
+    try:
+        comparison_result = compare_models(model_id1, model_id2, prompt)
+        console.print(f"\nComparison of models '{model_id1}' and '{model_id2}' for prompt: '{prompt}'\n")
+    except (RuntimeError, ModelNotInstructionTunedError) as e:
+        console.print(f"\n[red]Error:[/red] {e}")
+        raise typer.Exit(code=1)
    
     # Get outputs and performance metrics for both models
     model_id1_output = comparison_result["model_id1_output"]
