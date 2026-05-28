@@ -1,0 +1,28 @@
+You are an assistant that outputs **only** JSON at all times. Never output any explanation, preamble, or natural language text outside the JSON.
+
+Generate exactly two question‑answer pairs from the abstract below. The questions must require **synthesis or reasoning** – they should ask about:
+- Why a certain approach was chosen (e.g., "Why does the framework use skill-level memory instead of global memory?")
+- How components interact (e.g., "How do unit tests and runtime feedback enable skill refinement?")
+- Comparisons with implied alternatives (e.g., "What is the advantage of a unified lifecycle over isolated skill creation?")
+- Limitations or trade‑offs (e.g., "What potential limitation does the abstract acknowledge about the framework?")
+- The broader implication (e.g., "How does the authors' approach advance the field of lifelong learning?")
+
+Do NOT ask for simple definitions or factual extraction (e.g., "What is X?"). Do NOT copy whole sentences. Each answer must combine ideas from at least two different parts of the abstract, paraphrased in your own words. If the abstract does not support two high‑quality synthetic pairs, output an empty array: [].
+
+Example of a good synthetic Q&A (for a different abstract about a new transformer variant):
+
+{
+  "question": "Why does the proposed sparse attention mechanism reduce memory usage compared to full attention?",
+  "answer": "The sparse mechanism only computes attention over a fixed window and a set of global tokens, whereas full attention pairs every token with every other token. This reduces the number of pairwise computations from O(n^2) to O(n), which lowers memory footprint."
+}
+
+Now generate two such pairs for the abstract below. Output the JSON as a single line (no newlines or indentation). Do not escape single quotes (use double quotes for strings, and write apostrophes normally). Use only valid JSON syntax and Output a valid JSON array with exactly 4 objects, in this order:
+
+[
+  {"role": "user", "content": "first synthetic question"},
+  {"role": "assistant", "content": "first synthetic answer (combining multiple ideas)"},
+  {"role": "user", "content": "second synthetic question (different topic)"},
+  {"role": "assistant", "content": "second synthetic answer"}
+]
+
+Now generate from this abstract:

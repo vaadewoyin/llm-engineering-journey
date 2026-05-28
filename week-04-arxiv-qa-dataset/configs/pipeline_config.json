@@ -1,0 +1,11 @@
+{
+  "arxiv_query": "cat:cs.LG",
+  "max_papers": 3000,
+  "page_size": 500, 
+  "delay_seconds" : 60, 
+  "min_abstract_words": 50,
+  "max_abstract_words": 400,
+  "min_question_length":10,
+  "min_answer_length":10,
+  "prompt_file": "configs/prompt.txt"
+}
