@@ -1,7 +1,13 @@
 [project]
 name = "week-04-arxiv-qa-dataset"
 version = "0.1.0"
-description = "Add your description here"
+description = "Arxiv-qa-dataset"
 readme = "README.md"
 requires-python = ">=3.12"
-dependencies = []
+dependencies = [
+    "arxiv>=4.0.0",
+    "comet-ml>=3.58.0",
+    "opik>=2.0.47",
+    "qroq>=0.0.3",
+    "transformers>=5.8.1",
+]
