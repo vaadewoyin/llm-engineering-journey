@@ -4,7 +4,7 @@
 [![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
 [![GitHub last commit](https://img.shields.io/github/last-commit/vaadewoyin/llm-engineering-journey)](https://github.com/vaadewoyin/llm-engineering-journey)
 
-> 90 days of hands-on LLM engineering:
+> hands-on LLM engineering:
 > Built with PyTorch, Hugging Face and modern MLOps / LLMOps tools.
 
 ---
@@ -21,15 +21,12 @@ This repository documents a structured 13-week journey into LLM engineering, foc
 ---
 
 ## 📊 Projects (13 weeks)
-
-| Week | Project                  | Key Skills / Focus                                                                         |
-| ---- | ------------------------ | ------------------------------------------------------------------------------------------ |
-| 1    | MLP Trainer              | PyTorch training loop, Typer CLI, reproducibility, 94% accuracy on CoverType               |
-| 2    | Transformer From Scratch | Scaled dot‑product attention, multi‑head, positional encoding, sentence classification     |
-| 3    | LLM Inference CLI        | Hugging Face pipelines, streaming generation, `--compare` flag, token efficiency benchmark |
-| …    | …                        | …                                                                                          |
-
----
+| Week | Project                  | Key Skills / Focus                                                                                                         |
+| :--- | :----------------------- | :------------------------------------------------------------------------------------------------------------------------- |
+| 1    | MLP Trainer              | PyTorch training loop, Typer CLI, reproducibility, 94% accuracy on CoverType                                               |
+| 2    | Transformer From Scratch | Scaled dot‑product attention, multi‑head, positional encoding, sentence classification                                     |
+| 3    | LLM Inference CLI        | Hugging Face pipelines, streaming generation, `--compare` flag, token efficiency benchmark                                 |
+| 4    | ArXiv QA Dataset         | LLM‑driven synthetic dataset generation: ArXiv API, Unsloth + Llama‑3‑8B (4‑bit), ChatML, Comet ML & Opik observability, quality filtering, Hugging Face Hub |
 
 ## 🛠️ Tools & Technologies
 
