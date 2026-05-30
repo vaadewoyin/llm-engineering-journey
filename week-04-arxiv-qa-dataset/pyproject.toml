@@ -7,7 +7,8 @@ requires-python = ">=3.12"
 dependencies = [
     "arxiv>=4.0.0",
     "comet-ml>=3.58.0",
+    "datasets>=4.8.5",
+    "huggingface-hub>=1.15.0",
     "opik>=2.0.47",
-    "qroq>=0.0.3",
     "transformers>=5.8.1",
 ]
