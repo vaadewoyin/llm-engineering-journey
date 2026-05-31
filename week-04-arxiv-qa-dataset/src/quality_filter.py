@@ -8,6 +8,9 @@ validates that Q&A length for each pair, saves filtered pairs to outputs/final/q
 import json
 from pathlib import Path
 
+import comet_ml
+experiment = comet_ml.Experiment(project_name="week04-qa-dataset")
+
 
 def load_config(config_path):
     # Why: config loaded at runtime so missing file gives clear error message
@@ -18,6 +21,13 @@ def load_config(config_path):
         )
     with open(config_path, "r") as f:
         return json.load(f)
+
+def remove_single_quotes_per_line(line_json):
+    """Removes single-quote wrapping in content part of messages."""
+    msg = line_json["messages"]
+    for val in msg:
+        val["content"] = val["content"].strip("'").replace('"', "'")
+    return json.dumps(line_json) 
 
 def is_valid_chatml_pair(obj: dict, config:dict) -> bool:
     """
@@ -61,10 +71,17 @@ with open(QA_PAIRS_PATH, "r") as f:
             try:
                 data = json.loads(line)
                 if is_valid_chatml_pair(data, config=config):
-                    out.write(line)
+                    # Why: single-quote wrapping in content may affect SFT training quality
+                    line = remove_single_quotes_per_line(data)
+                    out.write(line + "\n")
                     passed += 1 
             except json.JSONDecodeError:
                 continue
             total+=1
 print(f"Total Q&A pairs before filtering - {total}")
 print(f"Total Q&A pairs after filtering - {passed}")
+
+# Comet ml logging
+experiment.log_metric("total_pairs", total)
+experiment.log_metric("passed_pairs", passed)
+experiment.log_metric("rejection_rate", (total - passed) / total)
