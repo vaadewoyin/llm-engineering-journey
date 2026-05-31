@@ -13,7 +13,7 @@ Fine-tuning language models require the use of high-quality dataset for optimal 
 - `ArXiv API Scraper` — Fetches paper metadata (title, abstract, ID, category) using arXiv API 
 - `Cleaning Pipeline` — Deduplicates by paper ID, filters abstracts by word count (min 50 words, max 400), saves cleaned JSONL.
 - `Q&A Generator` — Uses Unsloth + Llama-3-8B-Instruct (4‑bit) on Kaggle to generate two synthetic Q&A pairs per abstract in ChatML format.
-- `Quality filter` — Validates ChatML structure, checks question (≥10 words) and answer (≥20 words) lengths, logs rejection rate via Comet ML.
+- `Quality filter` — Validates ChatML structure, checks question (≥10 words) and answer (≥20 words) lengths, removes additional single-quote wrapping around message content, logs rejection rate via Comet ML.
 
 ## Key Decisions
 - **Prompt strategy:** Synthetic, reasoning‑based Q&A generation – see [`configs/prompt.txt`](configs/prompt.txt).
