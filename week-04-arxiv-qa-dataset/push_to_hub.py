@@ -9,5 +9,5 @@ dataset = load_dataset(
     split="train"
 )
 
-# Push to Hugging Face Hub
-dataset.push_to_hub("vaadewoyin/arxiv-ml-qa-dataset")
+# Push to Hugging Face Hub (overwrite former with new correction)
+dataset.push_to_hub("vaadewoyin/arxiv-ml-qa-dataset", private=True)
