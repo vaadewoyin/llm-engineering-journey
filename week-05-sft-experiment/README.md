@@ -52,7 +52,7 @@ week-05-sft/
 │   └── baseline_eval_config.json
 ├── eval/
 │   └── qualitative_rubric.md
-├── src/
+├── scripts/
 │   ├── main.py
 ├── tests/
 │   └── test_environment.py
