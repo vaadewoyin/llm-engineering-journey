@@ -1,18 +1,46 @@
 {
-    "seed": 45,
-    "train_split_ratio": 0.95,
-    "eval_size": 50,
-    "model_name": "unsloth/tinyllama-bnb-4bit",
-    "lora_r": 16,
-    "lora_alpha": 16,
-    "target_modules": ["q_proj", "v_proj"],
-    "max_seq_length": 2048,
-    "batch_size": 2,
-    "gradient_accumulation_steps": 4,
-    "learning_rates": [1e-4, 3e-4],
-    "num_epochs": 2,
-    "save_steps": 100,
-    "logging_steps": 5,
-    "eval_steps": 50,
-    "created": "2026-06-10"
+  "experiment_seed": 45,
+
+  "data_hf_dataset_path": "vaadewoyin/arxiv-ml-qa-dataset",
+  "data_train_split_ratio": 0.95,
+  "data_eval_size": 50,
+  "data_max_seq_length": 2048,
+  "data_packing": false,
+
+  "model_name": "unsloth/Qwen2.5-1.5B-Instruct",
+  "model_load_in_4bit": true,
+
+  "lora_r": 16,
+  "lora_alpha": 16,
+  "lora_dropout": 0.0,
+  "lora_bias": "none",
+  "lora_target_modules": ["q_proj", "k_proj", "v_proj", "o_proj", "gate_proj", "up_proj", "down_proj"],
+  "lora_use_gradient_checkpointing": false,
+
+  "training_batch_size": 2,
+  "training_gradient_accumulation_steps": 4,
+  "training_num_epochs": 3,
+  "training_learning_rates": [1e-4, 3e-4],
+  "training_warmup_steps": 25,
+  "training_weight_decay": 0.01,
+  "training_optimizer": "adamw_8bit",
+  "training_lr_scheduler": "linear",
+  "training_max_grad_norm": 1.0,
+
+  "eval_strategy": "steps",
+  "eval_steps": 50,
+  "load_best_model_at_end": true,
+  "metric_for_best_model": "eval_loss",
+  "greater_is_better": false,
+  "save_total_limit": 2,
+
+  "logging_save_steps": 100,
+  "logging_logging_steps": 5,
+  "logging_output_dir": "outputs",
+  "logging_report_to": "comet_ml",
+  "logging_run_name": "qwen-lora-lr-1e-4",
+
+  "hub_push_to_hub": false,
+  "hub_hub_model_id": "vaadewoyin/arxiv-qa-Qwen2.5-1.5B",
+  "hub_private": false
 }
