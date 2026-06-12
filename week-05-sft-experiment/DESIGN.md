@@ -1,33 +1,29 @@
-# DESIGN.md — [Project Name]
+# DESIGN.md
 
 ## 1. Problem
 Fine-tuning a small language model on Q&A pairs generated from ArXiv ML abstracts to teach the model how to respond to ML questions.
 
 ## 2. Components
-- `train_sft.py` — For SFT on a small language model.
-- `eval.py` — For evaluating the fine-tuned model.
+- `main.py` — For SFT on a small language model + evaluating the fine-tuned model.
 - `baseline_eval_config.json` — Contains the config used in fine-tuning the model, such as data split, random seed, etc.
 
 ## 3. Component Communication
-`train_sft.py` loads data & config from `data/qa_pairs.jsonl` and `configs/baseline_eval_config.json`, uses it to fine-tune the model, and saves the fine-tuned model to `output/fine_tuned_model`. `eval.py` loads the fine-tuned model and does evaluation.
+`main.py` loads data & config from `data/qa_pairs.jsonl` and `configs/baseline_eval_config.json`, uses it to fine-tune the model, saves the fine-tuned model to `output/` and also performs evaluation of the fine-tuned model
 
 ## 4. Failure Modes
-1. OOM error can occur if the model is too large for available GPU memory — **triggered when batch size × sequence length exceeds VRAM. Recovery: reduce batch size, enable gradient checkpointing.**
-2. Logging errors due to improper Comet ML setup — **triggered when API key is missing or network is blocked. Recovery: set `report_to="none"` and log locally.**
-3. Model fine-tuning gets interrupted during the process — **triggered by Kaggle session timeout or manual stop. Recovery: reload checkpoint from last save and resume.**
+1. OOM error can occur if the model is too large for available GPU memory — triggered when batch size × sequence length exceeds VRAM. Recovery: reduce batch size, enable gradient checkpointing.
+2. Logging errors due to improper Comet ML setup — triggered when API key is missing or network is blocked. Recovery: set `report_to="none"` and log locally.
+3. Model fine-tuning gets interrupted during the process — triggered by Kaggle session timeout or manual stop. Recovery: reload checkpoint from last save and resume.
 
 ## 5. Definition of Done
 1. Fine-tuned model stored in `output/`.
-2. Comet ML charts and logs for the two LR runs, **including loss curves, learning rate curve, gradient norms, and GPU memory per run.**
-3. **Perplexity computed on 50 held-out samples, with the actual number reported.**
-4. **10 qualitative examples scored against `eval/qualitative_rubric.md`, with scores (1–4 per dimension).**
-5. **Generators used in data pipeline (lazy loading).**
-6. **pytest fixtures with parametrised eval suite passing.**
+2. Comet ML charts and logs for the two LR runs, including loss curves, learning rate curve, gradient norms, and GPU memory per run.
+3. Perplexity computed on 50 held-out samples, with the actual number reported.
+4. 10 qualitative examples scored against `eval/qualitative_rubric.md`, with scores (1–4 per dimension).
 
 ## 5a. Tests I Will Write
 - `test_environment.py`: To test that the environment works with all needed functionality (GPU, libraries, etc.) operational.
 - `test_checkpoint_recovery.py`: Kills training at step 200, resumes from checkpoint 100, checks loss continuity.
-- `test_evaluation.py`: Parametrised eval suite using pytest fixtures.
 
 ## 6. Production Boundaries
 
@@ -35,12 +31,12 @@ Fine-tuning a small language model on Q&A pairs generated from ArXiv ML abstract
 1. Loading the data and config is done using Python code.
 2. Logging to Comet ML is also done using Python.
 3. Evaluation.
-4. **The learning rate value (hard-coded per run).**
-5. **When to save a checkpoint (`save_steps=100`).**
-6. **The train/validation split (fixed by seed=42).**
+4. The learning rate value (hard-coded per run).
+5. When to save a checkpoint (`save_steps=100`).
+6. The train/validation split (fixed by seed=42).
 
 ### Human inspection point
-To check what the system did, the user can check the Comet ML dashboard for all logging info, which includes charts for loss & training curve, and all other metrics. **For checkpoint inspection, open `output/checkpoint-{step}/trainer_state.json` to see the exact step, loss, and learning rate.**
+To check what the system did, the user can check the Comet ML dashboard for all logging info, which includes charts for loss & training curve, and all other metrics. For checkpoint inspection, open `output/checkpoint-{step}/` to see the exact step, loss, and learning rate.
 
 ### State representation
 Apart from Comet ML logs, model fine-tuning is checkpointed every 100 steps and logged in a JSON file that can be easily accessed to get log details.
@@ -82,8 +78,8 @@ A smaller gradient norm shows the gradient is more stable, which means training 
 
 **What does this system not handle?**
 1. The system does not handle fine-tuning of a large model.
-2. **It does not generate reasoning traces (Thinking SFT) or agentic tool‑use patterns.**
+2. It does not generate reasoning traces (Thinking SFT) or agentic tool‑use patterns
 
 **What would break it that you are aware of right now?**
 1. Loading a large model will break the system because it will lead to an out‑of‑memory error.
-2. **Missing or incorrect chat template in the tokenizer will prevent the model from learning proper turn boundaries.**
+2. Missing or incorrect chat template in the tokenizer will prevent the model from learning proper turn boundaries.
