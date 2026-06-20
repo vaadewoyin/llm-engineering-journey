@@ -1,4 +1,7 @@
-"""LoRA SFT on ArXiv Q&A dataset"""
+"""
+LoRA rank sweep on Qwen2.5‑1.5B with filtered 703‑pair dataset.
+Tests ranks 8, 16, 32, 64 to find the inflection point.
+"""
 
 import os
 import json
@@ -122,7 +125,7 @@ def train_rank(rank, config, train_dataset, eval_dataset):
         gradient_accumulation_steps=config["training_gradient_accumulation_steps"],
         warmup_steps=config["training_warmup_steps"],
         num_train_epochs=config["training_num_epochs"],                 
-        learning_rate= 2e-4, #config["training_learning_rates"],                  
+        learning_rate= config["training_learning_rates"],                  
         optim=config["training_optimizer"],
         weight_decay=config["training_weight_decay"],
         lr_scheduler_type=config["training_lr_scheduler"],
