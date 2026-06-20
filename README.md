@@ -30,6 +30,7 @@ Each week has its own folder with a complete project – code, experiments, logs
 | 3    | LLM Inference CLI        | Hugging Face pipelines, streaming generation, `--compare` flag, token efficiency benchmark. |
 | 4    | ArXiv QA Dataset         | Synthetic dataset generation: ArXiv API, Unsloth + Llama‑3‑8B (4‑bit), ChatML, Comet ML & Opik, quality filtering, Hugging Face Hub. |
 | 5    | SFT on ArXiv QA          | LoRA‑based Supervised Fine‑Tuning (Qwen2.5‑1.5B), learning rate comparison (1e‑4 vs 3e‑4), Comet ML logging, checkpointing, qualitative rubric evaluation, POSTMORTEM. |
+| 6    | LoRA Rank Analysis       | Rank sweep (r=8,16,32,64) on filtered 703‑pair dataset, inflection point identification (r=16 optimal), perplexity comparison,  Comet ML logging. |
 
 *More weeks will be added as the journey progresses (LoRA rank analysis, QLoRA, DPO, RAG, agentic systems).*
 
