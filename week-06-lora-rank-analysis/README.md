@@ -1,4 +1,4 @@
-# LoRA Rank Sweep – Week 6
+# LoRA Rank Analysis 
 
 [![Python 3.12](https://img.shields.io/badge/python-3.12-blue.svg)](https://www.python.org/downloads/)
 [![Unsloth](https://img.shields.io/badge/🤗%20Unsloth-LoRA-orange)](https://github.com/unslothai/unsloth)
@@ -59,6 +59,7 @@ See [`eval/qualitative_rubric.md`](eval/qualitative_rubric.md) for full level de
 
 ## Project Structure
 
+```
 week-06-lora-rank-analysis/
 ├── config/
 │   └── baseline_eval_config.json          # locked hyperparameters (reused from Week 5)
@@ -82,3 +83,4 @@ week-06-lora-rank-analysis/
 ├── README.md                              # project overview and results
 ├── pyproject.toml                         # dependencies and project metadata
 └── uv.lock                                # pinned dependencies (if using uv)
+```
