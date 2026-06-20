@@ -24,7 +24,7 @@ def setup_comet():
 
 
 def load_baseline_config():
-    config_path = Path("configs/baseline_eval_config.json")
+    config_path = Path("config/baseline_eval_config.json")
     with open(config_path, "r") as f:
         config = json.load(f)
     return config
