@@ -3,12 +3,13 @@ Generates chunks for QA pair generation
 
 Downloads papers from semantic scholar, saves papers and metadata to disk,
 extract chunks from each relevant sections per paper for QA pair generation
-""""
+"""
 
 import json
 import time
 import requests
 import os
+import re
 from dotenv import load_dotenv
 from pathlib import Path
 from datetime import datetime
@@ -21,7 +22,7 @@ urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 # Schematic scholar api key
 load_dotenv()
-S2_api_key = os.getenv('S2_API_Key')
+S2_API_KEY = os.getenv('S2_API_KEY')
 
 def is_relevant_paper(title, abstract):
     """ Checks if paper is relevant for download."""
@@ -292,5 +293,15 @@ PAPER_DIR.mkdir(parents=True, exist_ok=True)
 METADATA_PATH = PAPER_DIR / "downloaded_paper_metadata.jsonl"
 
 # Download papers
-download_s2_papers(api_key = S2_api_key, materials_list= MATERIALS,
+download_s2_papers(api_key = S2_API_KEY, materials_list= MATERIALS,
                    paper_count_per_material =1, save_dir=PAPER_DIR)
+
+
+def clean_markdown(text):
+    """Simple cleaning."""
+    text = re.sub(r'<!-- image -->', '', text)
+    text = re.sub(r'<!-- formula-not-decoded -->', '', text)
+    text = re.sub(r'\n\s*\n', '\n\n', text)
+    text = text.strip()
+    text = re.sub(r' +', ' ', text)
+    return text
