@@ -1,3 +1,10 @@
+"""
+Generates chunks for QA pair generation 
+
+Downloads papers from semantic scholar, saves papers and metadata to disk,
+extract chunks from each relevant sections per paper for QA pair generation
+""""
+
 import json
 import time
 import requests
@@ -10,9 +17,6 @@ from requests.exceptions import HTTPError, ConnectionError, Timeout, SSLError
 from docling.document_converter import DocumentConverter
 import urllib3
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
-
-
-
 
 
 # Schematic scholar api key
@@ -290,35 +294,3 @@ METADATA_PATH = PAPER_DIR / "downloaded_paper_metadata.jsonl"
 # Download papers
 download_s2_papers(api_key = S2_api_key, materials_list= MATERIALS,
                    paper_count_per_material =1, save_dir=PAPER_DIR)
-
-
-
-
-
-
-
-"""
-# Zip paper folder
-downloaded_papers = list(PAPER_DIR.glob("*.pdf"))
-with zipfile.ZipFile("downloaded_papers.zip", "w", zipfile.ZIP_DEFLATED) as zf:
-    for paper in downloaded_papers:
-        zf.write(paper)
-"""
-
-# check paper extraction
-paper_path = "/content/data/raw/paper/4c57a4fb19ef39730c51138d9734eb4efa94f7c4.pdf" #downloaded_papers[41]
-paper_path
-
-converter = DocumentConverter()
-result = converter.convert(paper_path)
-
-print(result.document.export_to_markdown()[:100])
-
-# Save to a .md file
-with open("docling_paper4.md", "w", encoding="utf-8") as f:
-    f.write(result.document.export_to_markdown())
-
-print("✅ Saved to your_paper.md")
-
-# Chunking logic
-
