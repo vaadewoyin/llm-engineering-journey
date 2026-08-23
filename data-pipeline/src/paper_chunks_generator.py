@@ -297,7 +297,7 @@ download_s2_papers(api_key = S2_API_KEY, materials_list= MATERIALS,
 
 
 def clean_markdown(text):
-    """Simple cleaning."""
+    """Simple cleaning for docling extracted markdown"""
     text = re.sub(r'<!-- image -->', '', text)
     text = re.sub(r'<!-- formula-not-decoded -->', '', text)
     text = re.sub(r'\n\s*\n', '\n\n', text)
