@@ -3,7 +3,7 @@ Generates chunks for QA pair generation
 
 Downloads papers from semantic scholar, saves papers and metadata to disk,
 extract chunks from each relevant sections per paper for QA pair generation
-""""
+"""
 
 import json
 import time
@@ -14,7 +14,6 @@ from pathlib import Path
 from datetime import datetime
 from semanticscholar import SemanticScholar
 from requests.exceptions import HTTPError, ConnectionError, Timeout, SSLError
-from docling.document_converter import DocumentConverter
 import urllib3
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
