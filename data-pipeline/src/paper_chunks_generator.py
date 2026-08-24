@@ -15,10 +15,14 @@ import requests
 from dotenv import load_dotenv
 from requests.exceptions import ConnectionError, HTTPError, SSLError, Timeout
 from semanticscholar import SemanticScholar
+import html
+import tiktoken
+from docling.document_converter import DocumentConverter, PdfFormatOption
+from docling.datamodel.pipeline_options import PdfPipelineOptions
+from docling.datamodel.base_models import InputFormat
+
 import urllib3
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
-
-
 # Schematic scholar api key
 load_dotenv()
 S2_API_KEY = os.getenv('S2_API_KEY')
@@ -295,14 +299,36 @@ METADATA_PATH = PAPER_DIR / "downloaded_paper_metadata.jsonl"
 download_s2_papers(api_key = S2_API_KEY, materials_list= MATERIALS,
                    paper_count_per_material =1, save_dir=PAPER_DIR)
 
+def docling_paper_converter():
+    # Configure PDF pipeline
+    pipeline_options = PdfPipelineOptions()
+    pipeline_options.do_table_structure = True
+    pipeline_options.do_ocr = False
+    pipeline_options.generate_page_images = False
+    pipeline_options.generate_picture_images = False
 
+    # Create converter
+    converter = DocumentConverter(format_options={InputFormat.PDF:
+                                                  PdfFormatOption(pipeline_options=pipeline_options)})
+    
+    return converter
+
+def convert_paper_to_markdown(converter, paper_path):
+    # Convert PDF
+    result = converter.convert(paper_path)
+    md_text = result.document.export_to_markdown()
+    return md_text
+
+
+# clean markdown file
 def clean_markdown(text):
-    """Simple cleaning for docling extracted markdown"""
+    """Clean docling extracted markdown"""
     text = re.sub(r'<!-- image -->', '', text)
     text = re.sub(r'<!-- formula-not-decoded -->', '', text)
     text = re.sub(r'\n\s*\n', '\n\n', text)
     text = text.strip()
     text = re.sub(r' +', ' ', text)
+    text = html.unescape(text)
     return text
 
 # find headers
@@ -439,3 +465,9 @@ def extract_section(md_text, headers, section_to_extract):
     
     else:
         return None
+
+
+
+
+# pipeline
+tokenizer = tiktoken.encoding_for_model("gpt-4")
