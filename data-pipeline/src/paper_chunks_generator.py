@@ -5,16 +5,16 @@ Downloads papers from semantic scholar, saves papers and metadata to disk,
 extract chunks from each relevant sections per paper for QA pair generation
 """
 
+from datetime import datetime
 import json
+import os
+from pathlib import Path
+import re
 import time
 import requests
-import os
-import re
 from dotenv import load_dotenv
-from pathlib import Path
-from datetime import datetime
+from requests.exceptions import ConnectionError, HTTPError, SSLError, Timeout
 from semanticscholar import SemanticScholar
-from requests.exceptions import HTTPError, ConnectionError, Timeout, SSLError
 import urllib3
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
@@ -304,3 +304,138 @@ def clean_markdown(text):
     text = text.strip()
     text = re.sub(r' +', ' ', text)
     return text
+
+# find headers
+def get_headers(text):
+    """
+    Find all Markdown headers in the text.
+    Returns a list of (title, position, level).
+    """
+    pattern = r'^(#{1,6})\s+(.+?)$'
+    headers = []
+
+    # Find all matches
+    for match in re.finditer(pattern, text, re.MULTILINE):
+        level = len(match.group(1))  # Number of # symbols
+        title = match.group(2).strip()  # The title text
+        position = match.start()  # Where it starts in the text
+
+        headers.append((title, position, level))
+
+    return headers
+
+
+def find_sections(headers, section):
+    """Find sections using Introduction as an anchor."""
+    section = section.lower()
+    
+    SECTION_PATTERNS = {
+        "methodology": ["method", "methodology", "materials and methods", "materials & methods",
+                       "experimental methods", "experimental procedure", "materials"],
+        "results_discussion": ["results", "discussion", "result and discussion",
+                              "results and discussion", "results & discussion", 
+                              "results and analysis", "results & analysis"],
+    }
+    
+    # Handle conclusion
+    if section == "conclusion":
+        for text, pos, level in headers:
+            if "conclusion" in text.lower():
+                return text, pos, level
+        return None
+    
+    # Find Introduction position
+    intro_pos = None
+    for idx, (text, pos, level) in enumerate(headers):
+        if "introduction" in text.lower():
+            intro_pos = idx
+            break
+    
+    # If Introduction found, start searching after it
+    if intro_pos is not None:
+        start_idx = intro_pos + 1
+    else:
+        start_idx = 0  # Fallback: start from beginning
+    
+    # Search only the relevant headers
+    if section == "methodology":
+        patterns = SECTION_PATTERNS["methodology"]
+    elif section == "results":
+        patterns = SECTION_PATTERNS["results_discussion"]
+    else:
+        return None
+    
+    # Search from start_idx to end
+    for text, pos, level in headers[start_idx:]:
+        text_lower = text.lower()
+        for keyword in patterns:
+            if keyword in text_lower:
+                return text, pos, level
+    
+    return None
+
+def extract_fallback(md_text, headers, conclusion_pos):
+    """
+    Fallback extraction: take from halfway through the headers before Conclusion.
+    """
+    if not conclusion_pos:
+        # No conclusion: take the middle 15,000 characters
+        mid = len(md_text) // 2
+        return md_text[mid:mid + 15000]
+    
+    conclusion_position = conclusion_pos[1]
+    
+    # Get headers before conclusion
+    headers_before = []
+    for title, pos, level in headers:
+        if pos < conclusion_position:
+            headers_before.append((title, pos, level))
+        else:
+            break
+    
+    num_headers = len(headers_before)
+    
+    if num_headers == 0:
+        # Fallback: 10,000 chars before conclusion
+        start = max(0, conclusion_position - 10000)
+        return md_text[start:conclusion_position]
+    
+    # Take from halfway point
+    half_index = num_headers // 2
+    start_pos = headers_before[half_index][1]
+    
+    return md_text[start_pos:conclusion_position]
+
+
+def extract_section(md_text, headers, section_to_extract):
+    """
+    Extract a specific section from the Markdown text.
+    Returns the section text, or None if not found.
+    """
+    # Find section positions
+    methodology_result = find_sections(headers, "methodology")
+    results_discussion_result = find_sections(headers, "results_discussion")
+    conclusion_result = find_sections(headers, "conclusion")
+    
+    # Unpack results 
+    methodology_pos = methodology_result[1] if methodology_result else None
+    results_discussion_pos = results_discussion_result[1] if results_discussion_result else None
+    conclusion_pos = conclusion_result[1] if conclusion_result else None
+    
+    if section_to_extract == "methodology" and methodology_pos is not None:
+        end_pos = results_discussion_pos if results_discussion_pos else len(md_text)
+        return md_text[methodology_pos:end_pos]
+    
+    elif section_to_extract == "results_discussion" and results_discussion_pos is not None:
+        end_pos = conclusion_pos if conclusion_pos else len(md_text)
+        return md_text[results_discussion_pos:end_pos]
+    
+    elif section_to_extract == "conclusion" and conclusion_pos is not None:
+        return md_text[conclusion_pos:]
+    
+    # --- Fallback: If section not found, try the "halfway to conclusion" approach ---
+    elif section_to_extract in ["methodology", "results_discussion", "conclusion"]:
+        return extract_fallback(md_text, headers, conclusion_result)
+    
+    else:
+        return None
