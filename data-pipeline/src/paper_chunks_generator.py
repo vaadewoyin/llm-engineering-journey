@@ -1,5 +1,5 @@
 """
-Generates chunks for QA pair generation 
+Generates chunks for QA pair generation
 
 Downloads papers from semantic scholar, saves papers and metadata to disk,
 extract chunks from each relevant sections per paper for QA pair generation
@@ -32,12 +32,12 @@ S2_API_KEY = os.getenv('S2_API_KEY')
 
 
 def is_relevant_paper(title, abstract):
-    """ Checks if paper is relevant for download."""
+    """Checks if paper is relevant for download."""
     title_text = title.lower()
     abstract_text = (abstract or "").lower()
     full_text = title_text + abstract_text
 
-    # Policy / Survey / Review papers
+    # Reject Policy / Survey / Review papers
     policy_signals = [
         "delphi", "questionnaire", "expert survey", "likert scale",
         "semi-structured interview", "focus group", "policy",
@@ -47,27 +47,27 @@ def is_relevant_paper(title, abstract):
     if any(signal in full_text for signal in policy_signals):
         return False
 
-    # 2. REJECT: Asphalt / Bitumen (but NOT binder)
+    # Asphalt / Bitumen
     if any(x in full_text for x in ["asphalt", "asphaltic", "bitumen", "bituminous"]):
         return False
 
-    # 3. KEEP: Must have at least one experimental / replacement keyword
+    # Must have at least one experimental / replacement keyword
     experimental_keywords = [
         "compressive strength", "tensile strength", "flexural strength",
-        "mechanical properties",  "mix design", "mix proportion",
+        "mechanical properties", "mix design", "mix proportion",
         "mix ratio", "workability", "slump",
-        "water-cement","curing", "durability",
+        "water-cement", "curing", "durability",
         "microstructure", "SEM", "XRD", "TGA",
-        "specimen", "testing", "experimental",  "trial mix",
+        "specimen", "testing", "experimental", "trial mix",
         "sample preparation", "test results",
         "replacement", "replace", "substitution", "substituted",
-        "supplementary cementitious",  "cement replacement",
+        "supplementary cementitious", "cement replacement",
         "aggregate replacement", "alternative material"
     ]
     if not any(kw in full_text for kw in experimental_keywords):
         return False
 
-    # 4. KEEP: Must be about cementitious materials (check full text, broader list)
+    # Cementitious materials term
     core_subject_terms = [
         "concrete", "mortar", "cement paste",
         "cement", "cementitious", "cementitious material",
@@ -80,21 +80,19 @@ def is_relevant_paper(title, abstract):
 
 
 def create_file_name(result):
-    """Create short pdf file"""
-    id = result["paperId"]
+    """Create pdf filename."""
+    paper_id = result["paperId"]
     title = result["title"]
     year = result["year"]
-    title_mod= '_'.join(title.split()[:8])
-    return f"{id[:5]}_{title_mod}_{year}"
+    title_mod = '_'.join(title.split()[:8])
+    return f"{paper_id[:5]}_{title_mod}_{year}"
 
 
 def download_s2_papers(api_key, materials_list, paper_count_per_material,
                        save_dir, metadata_path):
-    """ Downloads papers from Semantic scholar to disk"""
-    # metadata
+    """Downloads papers from Semantic Scholar to disk."""
     metadata = []
 
-    # headers
     headers = {
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
         "Accept": "application/pdf,text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
@@ -102,23 +100,17 @@ def download_s2_papers(api_key, materials_list, paper_count_per_material,
         "Connection": "keep-alive",
     }
 
-    # sch object
     sch = SemanticScholar(api_key=api_key)
-
-    # store paper_id to avoid duplicates
     paper_ids = set()
 
-    # loop over papers
-    for material in materials_list[:2]:
-
+    for material in materials_list:
         search_query = f'"{material}" concrete'
 
         results = sch.search_paper(
-            query = search_query,
-            publication_types= ['JournalArticle'],
+            query=search_query,
+            publication_types=['JournalArticle'],
             open_access_pdf=True,
             year="2020-",
-            #limit=100
         )
 
         saved_downloads_count = 0
@@ -128,7 +120,7 @@ def download_s2_papers(api_key, materials_list, paper_count_per_material,
             try:
                 result = next(result_iter)
             except StopIteration:
-                  break
+                break
             except Exception as e:
                 print(f" API error mid-pagination for '{search_query}': {e} — retrying in 5s")
                 time.sleep(5)
@@ -143,117 +135,97 @@ def download_s2_papers(api_key, materials_list, paper_count_per_material,
                     continue
 
                 pdf_url = oa["url"]
-                license= oa ["license"]
+                license = oa["license"]
             except Exception:
                 continue
 
             if paper_id not in paper_ids:
+                if license == "CCBY" and is_relevant_paper(result["title"], result["abstract"]):
+                    file_name = create_file_name(result)
+                    pdf_path = save_dir / f"{file_name}.pdf"
 
-                if license == "CCBY" and (is_relevant_paper(result["title"], result["abstract"])):
+                    if not pdf_url:
+                        continue
 
-                  file_name = create_file_name(result)
+                    try:
+                        response = requests.get(pdf_url, headers=headers, timeout=60)
+                        response.raise_for_status()
+                    except (SSLError, ConnectionError):
+                        try:
+                            response = requests.get(pdf_url, headers=headers, timeout=60, verify=False)
+                            response.raise_for_status()
+                        except Exception as e:
+                            print(f"Skip {file_name}: retry failed - {e}")
+                            continue
+                    except (HTTPError, Timeout) as e:
+                        print(f"Skip {file_name}: {e}")
+                        continue
 
-                  pdf_path = save_dir / f"{file_name}.pdf"
+                    try:
+                        content_type = response.headers.get("content-type", "").lower()
+                        if "pdf" in content_type or response.content[:4] == b"%PDF":
+                            with open(pdf_path, "wb") as f:
+                                f.write(response.content)
+                            print(f"{file_name}: saved to disk")
 
+                            saved_downloads_count += 1
+                            paper_ids.add(paper_id)
 
-                  if not pdf_url:
-                      continue
-
-                  try:
-                      response = requests.get(pdf_url, headers=headers, timeout=60)
-                      response.raise_for_status()
-
-                  except (SSLError, ConnectionError):
-                      try:
-                          response = requests.get(pdf_url, headers=headers, timeout=60, verify=False)
-                          response.raise_for_status()
-                      except Exception as e:
-                          print(f"Skip {file_name}: retry failed - {e}")
-                          continue
-
-                  except (HTTPError, Timeout) as e:
-                      print(f"Skip {file_name}: {e}")
-                      continue
-
-
-                  # obtained respomse, check its pdf
-                  try:
-                      content_type = response.headers.get("content-type", "").lower()
-                      if "pdf" in content_type or response.content[:4] == b"%PDF":
-                          with open(pdf_path, "wb") as f:
-                              f.write(response.content)
-                          print(f"{file_name}: saved to disk")
-
-                          saved_downloads_count += 1
-                          paper_ids.add(paper_id)
-
-                          # Update metadata for every successful downloads
-                          metadata.append({
-
-                          # core identifiers
-                          "paper_id": paper_id,
-                          "doi": result["externalIds"].get("DOI"),
-                          "title": paper_title,
-                          "authors": [a["name"] for a in result["authors"]],
-                          "year": result["year"],
-                          "venue": result["venue"],
-                          "journalName": result["journal"].get("name"),
-                          "publicationDate": result["publicationDate"],
-                          "isOpenAccess": result["isOpenAccess"],
-                          "url": result["url"],
-
-                          # Impact metrics
-                          "citationCount": result["citationCount"],
-
-                          # Abstract text
-                          "abstract": result["abstract"],
-
-                          "retrieved_for": material,
-                          "time_downloaded": datetime.now().strftime("%B %d, %Y at %I:%M %p"),
-                          "file_name": file_name  # for sake of future identification
-                          })
-
-                      else:
-                        print(f"Skip {file_name}: not a PDF")
-
-                  except Exception as e:
-                      print(f"Skip {file_name}: unexpected error - {e}")
-                      continue
+                            metadata.append({
+                                "paper_id": paper_id,
+                                "doi": result["externalIds"].get("DOI"),
+                                "title": paper_title,
+                                "authors": [a["name"] for a in result["authors"]],
+                                "year": result["year"],
+                                "venue": result["venue"],
+                                "journalName": result["journal"].get("name"),
+                                "publicationDate": result["publicationDate"],
+                                "isOpenAccess": result["isOpenAccess"],
+                                "url": result["url"],
+                                "citationCount": result["citationCount"],
+                                "abstract": result["abstract"],
+                                "retrieved_for": material,
+                                "time_downloaded": datetime.now().strftime("%B %d, %Y at %I:%M %p"),
+                                "file_name": file_name
+                            })
+                        else:
+                            print(f"Skip {file_name}: not a PDF")
+                    except Exception as e:
+                        print(f"Skip {file_name}: unexpected error - {e}")
+                        continue
 
             if saved_downloads_count == paper_count_per_material:
-              break
+                break
 
-    # save paper metadata
-    with open (metadata_path, "w") as f:
+    with open(metadata_path, "w") as f:
         for paper in metadata:
-          f.write(json.dumps(paper, ensure_ascii=False) + "\n")
+            f.write(json.dumps(paper, ensure_ascii=False) + "\n")
 
     return metadata
 
 
 def docling_paper_converter():
-    # Configure PDF pipeline
+    """Create and return a Docling converter instance."""
     pipeline_options = PdfPipelineOptions()
     pipeline_options.do_table_structure = True
     pipeline_options.do_ocr = False
     pipeline_options.generate_page_images = False
     pipeline_options.generate_picture_images = False
 
-    # Create converter
-    converter = DocumentConverter(format_options={InputFormat.PDF:
-                                                  PdfFormatOption(pipeline_options=pipeline_options)})
-
+    converter = DocumentConverter(
+        format_options={InputFormat.PDF: PdfFormatOption(pipeline_options=pipeline_options)}
+    )
     return converter
 
 
 def convert_paper_to_markdown(converter, paper_path):
+    """Convert a PDF to Markdown using Docling."""
     result = converter.convert(paper_path)
-    md_text = result.document.export_to_markdown()
-    return md_text
+    return result.document.export_to_markdown()
 
 
 def clean_markdown(text):
-    """Clean docling extracted markdown"""
+    """Clean Docling extracted Markdown."""
     text = re.sub(r'<!-- image -->', '', text)
     text = re.sub(r'<!-- formula-not-decoded -->', '', text)
     text = re.sub(r'\n\s*\n', '\n\n', text)
@@ -271,51 +243,48 @@ def get_headers(text):
     pattern = r'^(#{1,6})\s+(.+?)$'
     headers = []
 
-    # Find all matches
     for match in re.finditer(pattern, text, re.MULTILINE):
-        level = len(match.group(1))  # Number of # symbols
-        title = match.group(2).strip()  # The title text
-        position = match.start()  # Where it starts in the text
-
+        level = len(match.group(1))
+        title = match.group(2).strip()
+        position = match.start()
         headers.append((title, position, level))
 
     return headers
 
+
 def find_sections(headers, section):
-    """Find sections using Conclusion as an anchor."""
+    """Find sections using Conclusion as the anchor."""
     section = section.lower()
 
     SECTION_PATTERNS = {
-        "methodology": ["method", "methodology", "materials and methods", "materials & methods",
-                       "experimental program", "experimental procedure", "materials"],
-        "results_discussion": ["results", "discussion", "result and discussion",
-                              "results and discussion", "results & discussion",
-                              "results and analysis", "results & analysis"],
+        "methodology": [
+            "method", "methodology", "materials and methods", "materials & methods",
+            "experimental program", "experimental procedure", "materials"
+        ],
+        "results_discussion": [
+            "results", "discussion", "result and discussion",
+            "results and discussion", "results & discussion",
+            "results and analysis", "results & analysis"
+        ],
     }
 
-    # Handle conclusion
     if section == "conclusion":
         for text, pos, level in headers:
             if "conclusion" in text.lower():
                 return text, pos, level
         return None
 
-    # Find Conclusion position
     concl_pos = None
     for idx, (text, pos, level) in enumerate(headers):
         if "conclusion" in text.lower():
             concl_pos = idx
             break
 
-    # If Conclusion found, search backwards from before it
     if concl_pos is not None:
-        # Only search headers before Conclusion
         search_headers = headers[:concl_pos]
     else:
-        # Fallback: search all headers
         search_headers = headers
 
-    # Search only the relevant headers
     if section == "methodology":
         patterns = SECTION_PATTERNS["methodology"]
     elif section == "results_discussion":
@@ -323,8 +292,6 @@ def find_sections(headers, section):
     else:
         return None
 
-    # Search from the END of search_headers backwards
-    # This finds the LAST occurrence before Conclusion
     for text, pos, level in reversed(search_headers):
         text_lower = text.lower()
         for keyword in patterns:
@@ -333,20 +300,18 @@ def find_sections(headers, section):
 
     return None
 
+
 def align_to_paragraph(text, start_pos, end_pos=None):
     """Align start and end positions to paragraph boundaries."""
-    # Align Start
-    if start_pos <= 0:
+    if start_pos <= 0: # Align Start
         aligned_start = 0
     else:
-        # Search backwards for double newline
         search_start = max(0, start_pos - 5000)
         last_break = text.rfind('\n\n', search_start, start_pos)
 
         if last_break != -1:
-            aligned_start = last_break + 2  # Skip the \n\n
+            aligned_start = last_break + 2
         else:
-            # Fallback: search for single newline
             last_break = text.rfind('\n', search_start, start_pos)
             if last_break != -1:
                 aligned_start = last_break + 1
@@ -357,13 +322,11 @@ def align_to_paragraph(text, start_pos, end_pos=None):
     if end_pos is None or end_pos >= len(text):
         aligned_end = len(text)
     else:
-        # Search forward for double newline
         next_break = text.find('\n\n', end_pos)
 
         if next_break != -1:
             aligned_end = next_break
         else:
-            # Fallback: search for single newline
             next_break = text.find('\n', end_pos)
             if next_break != -1:
                 aligned_end = next_break
@@ -378,18 +341,15 @@ def extract_fallback(md_text, headers, conclusion_pos):
     Fallback for extraction:
     - If conclusion exists: take from halfway through headers before Conclusion.
     - If conclusion doesn't exist: take ~15,000 chars from middle of paper.
-
     Always aligns to paragraph boundaries.
     """
     if not conclusion_pos:
-        # No conclusion: take the middle 15,000 characters
         mid = len(md_text) // 2
         start, end = align_to_paragraph(md_text, mid, min(mid + 15000, len(md_text)))
         return md_text[start:end]
 
     conclusion_position = conclusion_pos
 
-    # Get headers before conclusion
     headers_before = []
     for title, pos, level in headers:
         if pos < conclusion_position:
@@ -400,18 +360,14 @@ def extract_fallback(md_text, headers, conclusion_pos):
     num_headers = len(headers_before)
 
     if num_headers == 0:
-        # No headers before conclusion: take last 10,000 chars before conclusion
         start = max(0, conclusion_position - 10000)
         start, end = align_to_paragraph(md_text, start, conclusion_position)
         return md_text[start:end]
 
-    # Take from halfway point (header index)
     half_index = num_headers // 2
     start_pos = headers_before[half_index][1]
 
-    # Align to paragraph boundaries
     start, end = align_to_paragraph(md_text, start_pos, conclusion_position)
-
     return md_text[start:end]
 
 
@@ -420,12 +376,10 @@ def extract_section(md_text, headers, section_to_extract):
     Extract a specific section from the Markdown text.
     Returns the section text, or None if not found.
     """
-    # Find section positions
     methodology_result = find_sections(headers, "methodology")
     results_discussion_result = find_sections(headers, "results_discussion")
     conclusion_result = find_sections(headers, "conclusion")
 
-    # Unpack results
     methodology_pos = methodology_result[1] if methodology_result else None
     results_discussion_pos = results_discussion_result[1] if results_discussion_result else None
     conclusion_pos = conclusion_result[1] if conclusion_result else None
@@ -441,7 +395,6 @@ def extract_section(md_text, headers, section_to_extract):
     elif section_to_extract == "conclusion" and conclusion_pos is not None:
         return md_text[conclusion_pos:]
 
-    # If section not found, use fallback logic
     elif section_to_extract in ["methodology", "results_discussion", "conclusion"]:
         return extract_fallback(md_text, headers, conclusion_pos)
 
@@ -450,12 +403,21 @@ def extract_section(md_text, headers, section_to_extract):
 
 
 def count_tokens(paragraph, tokenizer):
+    """Count tokens in a paragraph using tokenizer."""
     return len(tokenizer.encode(paragraph))
 
 
 def chunk_papers(md_text, tokenizer, section, max_tokens=450):
+    """
+    Chunk paper Markdown by paragraphs.
+    Keeps chunks within 450 tokens except for large tables.
+    """
     paper_headers = get_headers(md_text)
     extracted_section = extract_section(md_text, paper_headers, section)
+
+    if not extracted_section:
+        return []
+
     paragraphs = extracted_section.split("\n\n")
 
     chunks = []
@@ -463,25 +425,26 @@ def chunk_papers(md_text, tokenizer, section, max_tokens=450):
     token_counts = 0
 
     for paragraph in paragraphs:
+        if not paragraph.strip():
+            continue
+
         paragraph_tokens = count_tokens(paragraph, tokenizer)
 
         if paragraph_tokens >= max_tokens:
             chunks.append(paragraph)
             continue
 
-        if paragraph_tokens < max_tokens:
-            token_counts += paragraph_tokens
-            if token_counts < max_tokens:
-                current_chunks.append(paragraph)
-                continue
-            else:
-                current_chunk_texts = "\n\n".join(current_chunks)
-                chunks.append(current_chunk_texts)
-                current_chunks = []
-                token_counts = 0
-                current_chunks.append(paragraph)
+        token_counts += paragraph_tokens
+        if token_counts < max_tokens:
+            current_chunks.append(paragraph)
+            continue
+        else:
+            current_chunk_texts = "\n\n".join(current_chunks)
+            chunks.append(current_chunk_texts)
+            current_chunks = []
+            token_counts = 0
+            current_chunks.append(paragraph)
 
-    # After the loop
     if current_chunks:
         chunks.append("\n\n".join(current_chunks))
 
@@ -489,74 +452,87 @@ def chunk_papers(md_text, tokenizer, section, max_tokens=450):
 
 
 def get_chunk_metadata(chunk_text, chunk_idx, section_name,
-                       metadata, file_name, tokenizer):
+                       metadata_lookup, file_name, tokenizer):
+    """Get metadata for a single chunk."""
+    chunk_meta = metadata_lookup.get(file_name)
+    if not chunk_meta:
+        return None
+
     token_count = len(tokenizer.encode(chunk_text))
 
-    for chunk_meta in metadata:
-        if chunk_meta["file_name"] == file_name:
-          return {
-                  # Core identifiers
-                  "chunk_index": f"chunk_{chunk_idx:03}",
-                  "chunk_text": chunk_text,
-                  "token_count": token_count,
-                  "section": section_name,
-                  "paper_id": chunk_meta["paper_id"],
-                  "paper_title": chunk_meta["title"],
-                  "year": chunk_meta["year"],
-                  "url": chunk_meta["url"],
-                  "downloaded_paper_name":chunk_meta["file_name"]
-              }
-
-
-def save_chunk(chunks, chunk_path, metadata,
-               section_name, file_name, tokenizer):
-    with open(CHUNK_PATH, "a") as f:
-      for idx, chunk_text in enumerate(chunks):
-          chunk_metadata = get_chunk_metadata(chunk_text, idx, section_name,
-                                              metadata, file_name, tokenizer)
-
-          f.write(json.dumps(chunk_metadata, ensure_ascii=False) + "\n")
-
+    return {
+        "chunk_id": f"chunk_{chunk_idx:03}",
+        "text": chunk_text,
+        "token_count": token_count,
+        "section": section_name,
+        "paper_id": chunk_meta["paper_id"],
+        "paper_title": chunk_meta["title"],
+        "paper_year": chunk_meta["year"],
+        "paper_url": chunk_meta["url"],
+        "downloaded_paper_name": chunk_meta["file_name"],
+    }
 
 
 def process_paper_pipeline(api_key, materials_list, paper_count_per_material,
                            downloaded_paper_dir, metadata_path, tokenizer, chunk_path):
-
+    """Main pipeline: download papers, extract, chunk, and save."""
     # Download papers & get metadata
-    metadata = download_s2_papers(api_key = api_key, materials_list= materials_list,
-                                  paper_count_per_material =paper_count_per_material,
-                                  save_dir=downloaded_paper_dir, metadata_path = metadata_path)
+    metadata = download_s2_papers(
+        api_key=api_key,
+        materials_list=materials_list,
+        paper_count_per_material=paper_count_per_material,
+        save_dir=downloaded_paper_dir,
+        metadata_path=metadata_path
+    )
 
-    downloaded_paper_list = (list(downloaded_paper_dir.glob("*.pdf")))
+    # metadata lookup once
+    metadata_lookup = {meta["file_name"]: meta for meta in metadata}
 
-    # Docling converter
+    downloaded_paper_list = list(downloaded_paper_dir.glob("*.pdf"))
+
+    # Docling converter (created once)
     converter = docling_paper_converter()
 
-    # Loop over downloaded papers
     for downloaded_paper in downloaded_paper_list:
         downloaded_paper_file_name = downloaded_paper.stem
 
-        # Docling extraction
-        md_text = convert_paper_to_markdown(converter, downloaded_paper)
-        md_text_clean = clean_markdown(md_text)
+        try:
+            # Docling extraction
+            md_text = convert_paper_to_markdown(converter, downloaded_paper)
+            md_text_clean = clean_markdown(md_text)
 
-        section_names = ["methodology", "results_discussion"]
-        for section_name in section_names:
-            paper_chunks = chunk_papers(md_text_clean, tokenizer,
-                                        section = section_name, max_tokens=450)
+            section_names = ["methodology", "results_discussion"]
 
-            save_chunk(paper_chunks, chunk_path, metadata,
-               section_name, downloaded_paper_file_name, tokenizer)
+            for section_name in section_names:
+                paper_chunks = chunk_papers(
+                    md_text_clean,
+                    tokenizer,
+                    section=section_name,
+                    max_tokens=450
+                )
 
-    # Get number of saved chunks
+                # Write each chunk immediately (append mode)
+                with open(chunk_path, "a") as f:
+                    for idx, chunk_text in enumerate(paper_chunks):
+                        chunk_metadata = get_chunk_metadata(
+                            chunk_text, idx + 1, section_name,
+                            metadata_lookup, downloaded_paper_file_name, tokenizer
+                        )
+                        if chunk_metadata:
+                            f.write(json.dumps(chunk_metadata, ensure_ascii=False) + "\n")
+
+        except Exception:
+            continue
+
+    # Count total number of processed chunks
     with open(chunk_path, "r") as f:
         saved_chunks_total = f.readlines()
 
-    # Check number of downloaded papers
-    print(f"\nDownloaded {len(downloaded_paper_list)} papers.")
-    print(f"Downloaded papers metadata saved to '{metadata_path}'")
-    print(f"Total number of saved chunks - {len(saved_chunks_total)}")
-
+    
+    print(f" Downloaded: {len(downloaded_paper_list)} papers")
+    print(f" Metadata saved to: {metadata_path}")
+    print(f" Total chunks saved: {len(saved_chunks_total)}")
+    print(f" Chunks saved to: {chunk_path}")
 
 
 
@@ -566,18 +542,20 @@ def process_paper_pipeline(api_key, materials_list, paper_count_per_material,
 DATA_DIR = Path("data")
 DATA_DIR.mkdir(parents=True, exist_ok=True)
 
-PAPER_DIR =  DATA_DIR / "papers"
+PAPER_DIR = DATA_DIR / "papers"
 PAPER_DIR.mkdir(parents=True, exist_ok=True)
 
-METADATA_PATH = DATA_DIR / "downloaded_paper_metadata.jsonl"
-CHUNK_PATH = DATA_DIR / "chunk.jsonl"
 
+METADATA_PATH = DATA_DIR / "downloaded_paper_metadata.jsonl"
+CHUNK_PATH = DATA_DIR / "chunks.jsonl"
+
+# Materials list 
 MATERIALS = [
     # Industrial by-products
     ("fly ash", "ground granulated blast furnace slag", "silica fume", "steel slag",
      "copper slag", "metakaolin", "calcined clay", "volcanic ash", "glass powder"),
 
-    # Agricultural / biomass ashes
+    # Agricultural waste ashes
     ("rice husk ash", "rice straw ash", "palm oil fuel ash", "oil palm fibre ash",
      "sugarcane bagasse ash", "coconut shell ash", "palm kernel shell ash",
      "cassava peel ash", "corn cob ash", "corn stalk ash", "groundnut shell ash",
@@ -602,13 +580,17 @@ MATERIALS = [
      "waste paper ash"),
 ]
 
-# Flatten to a single list if needed
 MATERIALS_FLAT = [item for group in MATERIALS for item in group]
 
 # Tokenizer
-gpt_tokenizer = tiktoken.encoding_for_model("gpt-5")
+GPT_TOKENIZER = tiktoken.encoding_for_model("gpt-5")
 
-process_paper_pipeline(api_key =S2_API_KEY, materials_list = MATERIALS_FLAT,
-                       paper_count_per_material =1, downloaded_paper_dir=PAPER_DIR,
-                       metadata_path = METADATA_PATH, tokenizer=gpt_tokenizer,
-                       chunk_path=CHUNK_PATH)
+process_paper_pipeline(
+    api_key=S2_API_KEY,
+    materials_list=MATERIALS_FLAT,
+    paper_count_per_material=1,
+    downloaded_paper_dir=PAPER_DIR,
+    metadata_path=METADATA_PATH,
+    tokenizer=GPT_TOKENIZER,
+    chunk_path=CHUNK_PATH
+)
