@@ -446,18 +446,23 @@ def align_to_paragraph(text, start_pos, end_pos=None):
                 aligned_end = len(text)
     
     return aligned_start, aligned_end
-    
+
 def extract_fallback(md_text, headers, conclusion_pos):
     """
-    Fallback extraction: take from halfway through the headers before Conclusion.
+    Fallback for extraction:
+    - If conclusion exists: take from halfway through headers before Conclusion.
+    - If conclusion doesn't exist: take ~15,000 chars from middle of paper.
+    
+    Always aligns to paragraph boundaries.
     """
     if not conclusion_pos:
         # No conclusion: take the middle 15,000 characters
         mid = len(md_text) // 2
-        return md_text[mid:mid + 15000]
-    
+        start, end = align_to_paragraph(md_text, mid, min(mid + 15000, len(md_text)))
+        return md_text[start:end]
+
     conclusion_position = conclusion_pos[1]
-    
+
     # Get headers before conclusion
     headers_before = []
     for title, pos, level in headers:
@@ -465,20 +470,23 @@ def extract_fallback(md_text, headers, conclusion_pos):
             headers_before.append((title, pos, level))
         else:
             break
-    
+
     num_headers = len(headers_before)
-    
+
     if num_headers == 0:
-        # Fallback: 10,000 chars before conclusion
+        # No headers before conclusion: take last 10,000 chars before conclusion
         start = max(0, conclusion_position - 10000)
-        return md_text[start:conclusion_position]
-    
-    # Take from halfway point
+        start, end = align_to_paragraph(md_text, start, conclusion_position)
+        return md_text[start:end]
+
+    # Take from halfway point (header index)
     half_index = num_headers // 2
     start_pos = headers_before[half_index][1]
     
-    return md_text[start_pos:conclusion_position]
-
+    # Align to paragraph boundaries
+    start, end = align_to_paragraph(md_text, start_pos, conclusion_position)
+    
+    return md_text[start:end]
 
 def extract_section(md_text, headers, section_to_extract):
     """
