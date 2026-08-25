@@ -408,6 +408,45 @@ def find_sections(headers, section):
     
     return None
 
+def align_to_paragraph(text, start_pos, end_pos=None):
+    """Align start and end positions to paragraph boundaries."""
+    # Align Start 
+    if start_pos <= 0:
+        aligned_start = 0
+    else:
+        # Search backwards for double newline
+        search_start = max(0, start_pos - 5000)
+        last_break = text.rfind('\n\n', search_start, start_pos)
+        
+        if last_break != -1:
+            aligned_start = last_break + 2  # Skip the \n\n
+        else:
+            # Fallback: search for single newline
+            last_break = text.rfind('\n', search_start, start_pos)
+            if last_break != -1:
+                aligned_start = last_break + 1
+            else:
+                aligned_start = 0
+    
+    # Align End
+    if end_pos is None or end_pos >= len(text):
+        aligned_end = len(text)
+    else:
+        # Search forward for double newline
+        next_break = text.find('\n\n', end_pos)
+        
+        if next_break != -1:
+            aligned_end = next_break
+        else:
+            # Fallback: search for single newline
+            next_break = text.find('\n', end_pos)
+            if next_break != -1:
+                aligned_end = next_break
+            else:
+                aligned_end = len(text)
+    
+    return aligned_start, aligned_end
+    
 def extract_fallback(md_text, headers, conclusion_pos):
     """
     Fallback extraction: take from halfway through the headers before Conclusion.
