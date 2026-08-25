@@ -527,7 +527,6 @@ def process_paper_pipeline(api_key, materials_list, paper_count_per_material,
     # Count total number of processed chunks
     with open(chunk_path, "r") as f:
         saved_chunks_total = f.readlines()
-
     
     print(f" Downloaded: {len(downloaded_paper_list)} papers")
     print(f" Metadata saved to: {metadata_path}")
@@ -588,7 +587,7 @@ GPT_TOKENIZER = tiktoken.encoding_for_model("gpt-5")
 process_paper_pipeline(
     api_key=S2_API_KEY,
     materials_list=MATERIALS_FLAT,
-    paper_count_per_material=1,
+    paper_count_per_material=5, 
     downloaded_paper_dir=PAPER_DIR,
     metadata_path=METADATA_PATH,
     tokenizer=GPT_TOKENIZER,
