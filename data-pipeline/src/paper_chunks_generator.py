@@ -74,6 +74,14 @@ def is_relevant_paper(title, abstract):
 
     return True
 
+def create_file_name(result):
+    """Create short pdf file"""
+    id = result["paperId"]
+    title = result["title"]
+    year = result["year"]
+    title_mod= '_'.join(title.split()[:8])
+    return f"{id[:5]}_{title_mod}_{year}"
+
 def download_s2_papers(api_key, materials_list, paper_count_per_material, save_dir):
     """ Downloads papers from Semantic scholar to disk"""
     # metadata
