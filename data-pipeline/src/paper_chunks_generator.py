@@ -388,8 +388,14 @@ def extract_section(md_text, headers, section_to_extract):
     conclusion_pos = conclusion_result[1] if conclusion_result else None
 
     if section_to_extract == "methodology" and methodology_pos is not None:
-        end_pos = results_discussion_pos if results_discussion_pos else len(md_text)
+        if results_discussion_pos is not None:
+            end_pos = results_discussion_pos
+        elif conclusion_pos is not None:
+            end_pos = conclusion_pos
+        else:
+            end_pos = len(md_text)
         return md_text[methodology_pos:end_pos]
+    
 
     elif section_to_extract == "results_discussion" and results_discussion_pos is not None:
         end_pos = conclusion_pos if conclusion_pos else len(md_text)
