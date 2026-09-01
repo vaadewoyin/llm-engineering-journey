@@ -31,49 +31,52 @@ load_dotenv()
 S2_API_KEY = os.getenv('S2_API_KEY')
 
 
+def any_term_matches(text, terms):
+    """Whole-word/phrase match, case-insensitive, no substring false-positives."""
+    for term in terms:
+        pattern = rf'(?<![a-z0-9]){re.escape(term.lower())}(?![a-z0-9])'
+        if re.search(pattern, text):
+            return True
+    return False
+
+
 def is_relevant_paper(title, abstract):
     """Checks if paper is relevant for download."""
-    title_text = title.lower()
-    abstract_text = (abstract or "").lower()
-    full_text = title_text + abstract_text
+    full_text = (title.lower()) + " " + ((abstract or "").lower())  
 
-    # Reject Policy / Survey / Review papers
     policy_signals = [
         "delphi", "questionnaire", "expert survey", "likert scale",
         "semi-structured interview", "focus group", "policy",
         "sustainability assessment", "life cycle assessment",
         "review", "literature review", "state of the art", "meta-analysis"
     ]
-    if any(signal in full_text for signal in policy_signals):
+    if any_term_matches(full_text, policy_signals):
         return False
 
-    # Asphalt / Bitumen
-    if any(x in full_text for x in ["asphalt", "asphaltic", "bitumen", "bituminous"]):
+    if any_term_matches(full_text, ["asphalt", "asphaltic", "bitumen", "bituminous"]):
         return False
 
-    # Must have at least one experimental / replacement keyword
     experimental_keywords = [
         "compressive strength", "tensile strength", "flexural strength",
         "mechanical properties", "mix design", "mix proportion",
         "mix ratio", "workability", "slump",
         "water-cement", "curing", "durability",
-        "microstructure", "SEM", "XRD", "TGA",
+        "microstructure", "sem", "xrd", "tga",
         "specimen", "testing", "experimental", "trial mix",
         "sample preparation", "test results",
         "replacement", "replace", "substitution", "substituted",
         "supplementary cementitious", "cement replacement",
         "aggregate replacement", "alternative material"
     ]
-    if not any(kw in full_text for kw in experimental_keywords):
+    if not any_term_matches(full_text, experimental_keywords):
         return False
 
-    # Cementitious materials term
     core_subject_terms = [
         "concrete", "mortar", "cement paste",
         "cement", "cementitious", "cementitious material",
         "geopolymer", "alkali-activated", "alkali activated",
     ]
-    if not any(term in full_text for term in core_subject_terms):
+    if not any_term_matches(full_text, core_subject_terms):
         return False
 
     return True
