@@ -1,26 +1,10 @@
-"""
-QA pair generator using Qwen3.8
 
-"""
 
+# Necessary imports
 import json
 from unsloth import FastLanguageModel
 import opik
-
-
-# Config
-PROJECT_NAME = "sustainable-conc-papers-qa-gen-demo" #"sustainable-conc-papers-qa-gen"
-MODEL_NAME = "unsloth/Qwen3-14B-bnb-4bit" #"unsloth/Qwen3.8-27B-unsloth-bnb-4bit"
-PROJECT_VERSION = "v1"
-
-# Load model and tokenizer
-model, tokenizer = FastLanguageModel.from_pretrained(
-    model_name = MODEL_NAME,
-    max_seq_length = 4096,
-    dtype = None,
-    load_in_4bit = True,
-    device_map="auto"
-)
+from opik import track
 
 SYSTEM_PROMPT = """
 You are an expert civil engineer and scientific QA dataset generator specializing
@@ -384,37 +368,137 @@ def process_chunks(chunks_path, filtered_path, final_path, token_threshold=150):
     add_global_id(filtered_path, final_path)
     print(f"Final file: {final_path}")
 
-CHUNKS_PATH = "chunks.jsonl"
-FILTERED_PATH = "filtered_chunks.jsonl"
-FINAL_CHUNKS_PATH = "filtered_chunks_final.jsonl"
-process_chunks(CHUNKS_PATH, FILTERED_PATH, FINAL_CHUNKS_PATH, token_threshold=150)
+# Create prompts
+def create_prompts(chunks, tokenizer):
+    prompts = []
+    for chunk in chunks:
+        chunk_id = chunk["chunk_id"]
+        chunk_text = chunk["text"]
+        user_prompt = build_user_prompt(chunk_id, chunk_text)
+        messages = [
+        {"role": "system", "content": f"{SYSTEM_PROMPT}"},
+        {"role": "user", "content": f"{user_prompt}"}
+        ]
+        chunk_prompt = tokenizer.apply_chat_template(
+            messages,
+            tokenize =False,
+            add_generation_prompt = True,
+            add_special_tokens = True,
+            enable_thinking=False
+        )
+        prompts.append(chunk_prompt)
+    return prompts
 
-COMET_ML_KEY = "7HIctwLkXPgmsgYGJsDRx6GcK"
-
-# Opik config
-opik.configure(
-    api_key=COMET_ML_KEY,
-    project_name=PROJECT_NAME,
-    use_local=False,
-    workspace="vaadewoyin"        # Comet workspace name
-)
-
-#BATch gen
-chunks = load_jsonl(FINAL_CHUNKS_PATH)
-prompts = []
-for chunk in chunks:
-    chunk_id = chunk["chunk_id"]
-    chunk_text = chunk["text"]
-    user_prompt = build_user_prompt(chunk_id, chunk_text)
-    messages = [
-    {"role": "system", "content": f"{SYSTEM_PROMPT}"},
-    {"role": "user", "content": f"{user_prompt}"}
+def sort_prompts(chunks, prompts):
+    """Sort chunks and prompts by token count"""
+    combined = [
+        (chunk["token_count"], chunk, prompt)
+        for chunk, prompt in zip(chunks, prompts)
     ]
-    chunk_prompt = tokenizer.apply_chat_template(
-        messages,
-        tokenize =False,
-        add_generation_prompt = True,
-        add_special_tokens = True,
-        enable_thinking=False
+    combined.sort(key=lambda x: x[0])
+    chunks_sorted = [item[1] for item in combined]
+    prompts_sorted = [item[2] for item in combined]
+    return chunks_sorted, prompts_sorted
+
+@track
+def batch_qa_generation(chunks, prompts, model, tokenizer,
+                        batch_size, max_length, max_new_tokens,
+                        chunk_metadata_keys, qa_save_dir):
+    qa_results = []
+
+    for i in range(0, len(prompts), batch_size):
+        batch_prompts = prompts[i:i+batch_size]
+        batch_chunks = chunks[i:i+batch_size]
+
+        inputs = tokenizer(batch_prompts,
+                          return_tensors="pt",
+                          truncation=True,
+                          padding=True,
+                          padding_side="left",
+                          max_length=max_length).to("cuda")
+
+        outputs = model.generate(
+                    **inputs,
+                    max_new_tokens=max_new_tokens,
+                    temperature=0.7,
+                    top_p=0.80,
+                    top_k=20,
+                    min_p=0.0,
+                    #presence_penalty=1.5,
+                    repetition_penalty=1.0,
+                    do_sample=True,
+                )
+        for idx, chunk in enumerate(batch_chunks):
+            batch_input_length = inputs['input_ids'].shape[1]
+            sample_generated_tokens = outputs[idx][batch_input_length:]
+            response_text = tokenizer.decode(sample_generated_tokens, skip_special_tokens=True)
+            response_json = json.loads(response_text)
+
+            if isinstance(response_json, list) and len(response_json) >= 1:
+                for qa in response_json:
+                    for key in chunk_metadata_keys:
+                        qa[key] = chunk[key]
+                    qa_results.append(qa)
+
+    # Write qa_results to jsonl
+    with open(qa_save_dir, "w") as f:
+        for qa in qa_results:
+            f.write(json.dumps(qa, ensure_ascii=False) + "\n")
+
+def run_pipeline():
+    #COMET_ML_KEY 
+
+    # Config
+    PROJECT_NAME = "sustainable-conc-papers-qa-gen-demo" #"sustainable-conc-papers-qa-gen"
+    MODEL_NAME = "unsloth/Qwen3-8B-bnb-4bit" #"unsloth/Qwen3.8-27B-unsloth-bnb-4bit"
+
+    MAX_INPUT_TOKENS = 4096
+    MAX_NEW_TOKENS = 512
+    MAX_SEQ_LENGTH = 6144
+    BATCH_SIZE = 4
+
+    CHUNKS_PATH = "chunks.jsonl"
+    FILTERED_PATH = "filtered_chunks.jsonl"
+    FINAL_CHUNKS_PATH = "filtered_chunks_final.jsonl"
+    QA_PAIRS_PATH = "qa_pairs.jsonl"
+
+    METADATA_KEYS = [
+        "text", "global_id", "paper_id",
+        "paper_title", "paper_year", "paper_url",
+        "downloaded_paper_name", "section"
+    ]
+
+    # Opik config
+    opik.configure(
+        #api_key=COMET_ML_KEY,
+        project_name=PROJECT_NAME,
+        use_local=False,
+        workspace="vaadewoyin"        # Comet workspace name
     )
-    prompts.append(chunk_prompt)
+
+    # Load model and tokenizer
+    model, tokenizer = FastLanguageModel.from_pretrained(
+        model_name = MODEL_NAME,
+        max_seq_length = MAX_SEQ_LENGTH,
+        dtype = None,
+        load_in_4bit = True,
+        device_map="auto"
+    )
+
+
+    process_chunks(CHUNKS_PATH, FILTERED_PATH,
+                   FINAL_CHUNKS_PATH, token_threshold=150)
+
+    chunks = load_jsonl(FINAL_CHUNKS_PATH)
+    prompts = create_prompts(chunks, tokenizer)
+    chunks_sorted, prompts_sorted = sort_prompts(chunks, prompts)
+
+    batch_qa_generation(chunks=chunks_sorted,
+                        prompts=prompts_sorted,
+                        model=model,
+                        tokenizer=tokenizer,
+                        batch_size=BATCH_SIZE,
+                        max_length=MAX_INPUT_TOKENS,
+                        max_new_tokens = MAX_NEW_TOKENS,
+                        chunk_metadata_keys=METADATA_KEYS,
+                        qa_save_dir=QA_PAIRS_PATH)
