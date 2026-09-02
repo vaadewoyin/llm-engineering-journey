@@ -303,6 +303,16 @@ def find_sections(headers, section):
 
     return None
 
+def find_references(headers):
+    """Find the first References header position."""
+    ref_keywords = ["references", "bibliography", "works cited", "literature cited"]
+    for text, pos, level in headers:
+        text_lower = text.lower()
+        for keyword in ref_keywords:
+            if keyword in text_lower:
+                return pos
+    return None
+
 
 def align_to_paragraph(text, start_pos, end_pos=None):
     """Align start and end positions to paragraph boundaries."""
@@ -339,16 +349,24 @@ def align_to_paragraph(text, start_pos, end_pos=None):
     return aligned_start, aligned_end
 
 
-def extract_fallback(md_text, headers, conclusion_pos):
+def extract_fallback(md_text, headers, conclusion_pos, references_pos=None):
     """
     Fallback for extraction:
     - If conclusion exists: take from halfway through headers before Conclusion.
     - If conclusion doesn't exist: take ~15,000 chars from middle of paper.
-    Always aligns to paragraph boundaries.
+    Always aligns to paragraph boundaries and stops before references.
     """
+    # Helper to get safe end (never pass references)
+    def safe_end(end):
+        if references_pos is not None:
+            return min(references_pos, end)
+        return end
+
     if not conclusion_pos:
         mid = len(md_text) // 2
-        start, end = align_to_paragraph(md_text, mid, min(mid + 15000, len(md_text)))
+        end = min(mid + 15000, len(md_text))
+        end = safe_end(end)  # ensure we don't cross references
+        start, end = align_to_paragraph(md_text, mid, end)
         return md_text[start:end]
 
     conclusion_position = conclusion_pos
@@ -365,14 +383,17 @@ def extract_fallback(md_text, headers, conclusion_pos):
     if num_headers == 0:
         start = max(0, conclusion_position - 10000)
         start, end = align_to_paragraph(md_text, start, conclusion_position)
+        # ensure the end doesn't cross references
+        end = safe_end(end)
         return md_text[start:end]
 
     half_index = num_headers // 2
     start_pos = headers_before[half_index][1]
 
     start, end = align_to_paragraph(md_text, start_pos, conclusion_position)
+    # ensure the end doesn't cross references
+    end = safe_end(end)
     return md_text[start:end]
-
 
 def extract_section(md_text, headers, section_to_extract):
     """
@@ -382,10 +403,18 @@ def extract_section(md_text, headers, section_to_extract):
     methodology_result = find_sections(headers, "methodology")
     results_discussion_result = find_sections(headers, "results_discussion")
     conclusion_result = find_sections(headers, "conclusion")
+    
+    references_pos = find_references(headers)
 
     methodology_pos = methodology_result[1] if methodology_result else None
     results_discussion_pos = results_discussion_result[1] if results_discussion_result else None
     conclusion_pos = conclusion_result[1] if conclusion_result else None
+
+    # Helper to get the end boundary (stop before references if they exist)
+    def get_end_boundary(default_end):
+        if references_pos is not None:
+            return min(references_pos, default_end)
+        return default_end
 
     if section_to_extract == "methodology" and methodology_pos is not None:
         if results_discussion_pos is not None:
@@ -393,19 +422,25 @@ def extract_section(md_text, headers, section_to_extract):
         elif conclusion_pos is not None:
             end_pos = conclusion_pos
         else:
-            end_pos = len(md_text)
+            end_pos = get_end_boundary(len(md_text)) 
         return md_text[methodology_pos:end_pos]
-    
 
     elif section_to_extract == "results_discussion" and results_discussion_pos is not None:
-        end_pos = conclusion_pos if conclusion_pos else len(md_text)
+        if conclusion_pos is not None:
+            end_pos = conclusion_pos
+        else:
+            end_pos = get_end_boundary(len(md_text))  
         return md_text[results_discussion_pos:end_pos]
 
     elif section_to_extract == "conclusion" and conclusion_pos is not None:
+        # Stop before references if they appear after the conclusion
+        if references_pos is not None and references_pos > conclusion_pos:
+            return md_text[conclusion_pos:references_pos]
         return md_text[conclusion_pos:]
 
     elif section_to_extract in ["methodology", "results_discussion", "conclusion"]:
-        return extract_fallback(md_text, headers, conclusion_pos)
+        # Fallback: ensure the fallback doesn't include references
+        return extract_fallback(md_text, headers, conclusion_pos, references_pos)  
 
     else:
         return None
