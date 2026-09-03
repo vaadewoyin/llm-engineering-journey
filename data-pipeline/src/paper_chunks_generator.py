@@ -200,6 +200,8 @@ def download_s2_papers(api_key, materials_list, paper_count_per_material,
             if saved_downloads_count == paper_count_per_material:
                 break
 
+        time.sleep(2)
+
     with open(metadata_path, "w") as f:
         for paper in metadata:
             f.write(json.dumps(paper, ensure_ascii=False) + "\n")
