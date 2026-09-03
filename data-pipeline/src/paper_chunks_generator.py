@@ -115,105 +115,128 @@ def download_s2_papers(api_key, materials_list, paper_count_per_material,
     sch = SemanticScholar(api_key=api_key)
     paper_ids = set()
 
-    for material in materials_list:
-        search_query = f'"{material}" concrete'
+    # open metadata file in append mode once, write as we go
+    with open(metadata_path, "a", encoding="utf-8") as metadata_file:
 
-        results = sch.search_paper(
-            query=search_query,
-            publication_types=['JournalArticle'],
-            open_access_pdf=True,
-            year="2020-",
-        )
+        for material in materials_list:
+            search_query = f'"{material}" concrete'
 
-        saved_downloads_count = 0
-        result_iter = iter(results)
+            # retry/guard the initial search_paper call ---
+            results = None
+            for attempt in range(5):
+                try:
+                    results = sch.search_paper(
+                        query=search_query,
+                        publication_types=['JournalArticle'],
+                        open_access_pdf=True,
+                        year="2020-",
+                    )
+                    break
+                except Exception as e:
+                    wait = 5 * (attempt + 1)
+                    print(f"search_paper failed for '{search_query}' "
+                        f"(attempt {attempt+1}/5): {e} — retrying in {wait}s")
+                    time.sleep(wait)
 
-        while True:
-            try:
-                result = next(result_iter)
-            except StopIteration:
-                break
-            except Exception as e:
-                print(f" API error mid-pagination for '{search_query}': {e} — retrying in 5s")
-                time.sleep(5)
+            if results is None:
+                print(f"Skipping material '{material}' — search_paper kept failing")
                 continue
 
-            try:
-                paper_id = result["paperId"]
-                paper_title = result["title"]
-                oa = result["openAccessPdf"]
+            saved_downloads_count = 0
+            result_iter = iter(results)
+            pagination_retries = 0
 
-                if not oa:
+            while True:
+                try:
+                    result = next(result_iter)
+                except StopIteration:
+                    break
+                except Exception as e:
+                    pagination_retries += 1
+                    if pagination_retries > 5:
+                        print(f"Giving up pagination for '{search_query}' after repeated errors: {e}")
+                        break
+                    print(f" API error mid-pagination for '{search_query}': {e} — retrying in 5s")
+                    time.sleep(5)
                     continue
 
-                pdf_url = oa["url"]
-                license = oa["license"]
-            except Exception:
-                continue
+                try:
+                    paper_id = result["paperId"]
+                    paper_title = result["title"]
+                    oa = result["openAccessPdf"]
 
-            if paper_id not in paper_ids:
-                if license == "CCBY" and is_relevant_paper(result["title"], result["abstract"]):
-                    file_name = create_file_name(result)
-                    pdf_path = save_dir / f"{file_name}.pdf"
-
-                    if not pdf_url:
+                    if not oa:
                         continue
 
-                    try:
-                        response = requests.get(pdf_url, headers=headers, timeout=60)
-                        response.raise_for_status()
-                    except (SSLError, ConnectionError):
-                        try:
-                            response = requests.get(pdf_url, headers=headers, timeout=60, verify=False)
-                            response.raise_for_status()
-                        except Exception as e:
-                            print(f"Skip {file_name}: retry failed - {e}")
+                    pdf_url = oa["url"]
+                    license = oa["license"]
+                except Exception:
+                    continue
+
+                if paper_id not in paper_ids:
+                    if license == "CCBY" and is_relevant_paper(result["title"], result["abstract"]):
+                        file_name = create_file_name(result)
+                        pdf_path = save_dir / f"{file_name}.pdf"
+
+                        if not pdf_url:
                             continue
-                    except (HTTPError, Timeout) as e:
-                        print(f"Skip {file_name}: {e}")
-                        continue
 
-                    try:
-                        content_type = response.headers.get("content-type", "").lower()
-                        if "pdf" in content_type or response.content[:4] == b"%PDF":
-                            with open(pdf_path, "wb") as f:
-                                f.write(response.content)
-                            print(f"{file_name}: saved to disk")
+                        try:
+                            response = requests.get(pdf_url, headers=headers, timeout=60)
+                            response.raise_for_status()
+                        except (SSLError, ConnectionError):
+                            try:
+                                response = requests.get(pdf_url, headers=headers, timeout=60, verify=False)
+                                response.raise_for_status()
+                            except Exception as e:
+                                print(f"Skip {file_name}: retry failed - {e}")
+                                continue
+                        except (HTTPError, Timeout) as e:
+                            print(f"Skip {file_name}: {e}")
+                            continue
 
-                            saved_downloads_count += 1
-                            paper_ids.add(paper_id)
+                        try:
+                            content_type = response.headers.get("content-type", "").lower()
+                            if "pdf" in content_type or response.content[:4] == b"%PDF":
+                                with open(pdf_path, "wb") as f:
+                                    f.write(response.content)
+                                print(f"{file_name}: saved to disk")
 
-                            metadata.append({
-                                "paper_id": paper_id,
-                                "doi": result["externalIds"].get("DOI"),
-                                "title": paper_title,
-                                "authors": [a["name"] for a in result["authors"]],
-                                "year": result["year"],
-                                "venue": result["venue"],
-                                "journalName": result["journal"].get("name"),
-                                "publicationDate": result["publicationDate"],
-                                "isOpenAccess": result["isOpenAccess"],
-                                "url": result["url"],
-                                "citationCount": result["citationCount"],
-                                "abstract": result["abstract"],
-                                "retrieved_for": material,
-                                "time_downloaded": datetime.now().strftime("%B %d, %Y at %I:%M %p"),
-                                "file_name": file_name
-                            })
-                        else:
-                            print(f"Skip {file_name}: not a PDF")
-                    except Exception as e:
-                        print(f"Skip {file_name}: unexpected error - {e}")
-                        continue
+                                saved_downloads_count += 1
+                                paper_ids.add(paper_id)
 
-            if saved_downloads_count == paper_count_per_material:
-                break
+                                record = {
+                                    "paper_id": paper_id,
+                                    "doi": result["externalIds"].get("DOI"),
+                                    "title": paper_title,
+                                    "authors": [a["name"] for a in result["authors"]],
+                                    "year": result["year"],
+                                    "venue": result["venue"],
+                                    "journalName": result["journal"].get("name"),
+                                    "publicationDate": result["publicationDate"],
+                                    "isOpenAccess": result["isOpenAccess"],
+                                    "url": result["url"],
+                                    "citationCount": result["citationCount"],
+                                    "abstract": result["abstract"],
+                                    "retrieved_for": material,
+                                    "time_downloaded": datetime.now().strftime("%B %d, %Y at %I:%M %p"),
+                                    "file_name": file_name
+                                }
+                                metadata.append(record)
 
-        time.sleep(2)
+                                # --- FIX 2: write metadata immediately, don't wait till the end ---
+                                metadata_file.write(json.dumps(record, ensure_ascii=False) + "\n")
+                                metadata_file.flush()
+                            else:
+                                print(f"Skip {file_name}: not a PDF")
+                        except Exception as e:
+                            print(f"Skip {file_name}: unexpected error - {e}")
+                            continue
 
-    with open(metadata_path, "w") as f:
-        for paper in metadata:
-            f.write(json.dumps(paper, ensure_ascii=False) + "\n")
+                if saved_downloads_count == paper_count_per_material:
+                    break
+
+            time.sleep(2) 
 
     return metadata
 
