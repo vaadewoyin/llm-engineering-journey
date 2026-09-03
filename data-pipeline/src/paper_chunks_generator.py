@@ -42,15 +42,24 @@ def any_term_matches(text, terms):
 
 def is_relevant_paper(title, abstract):
     """Checks if paper is relevant for download."""
-    full_text = (title.lower()) + " " + ((abstract or "").lower())  
 
-    policy_signals = [
+    full_text = (title.lower()) + " " + ((abstract or "").lower())
+
+    soil_related_terms = [
+        "soil", "laterite", "road", "pavement", "asphalt",
+        "bitumen", "geotechnical"
+    ]
+
+    if any_term_matches(title.lower(), soil_related_terms):
+        return False  
+
+    policy_terms = [
         "delphi", "questionnaire", "expert survey", "likert scale",
         "semi-structured interview", "focus group", "policy",
         "sustainability assessment", "life cycle assessment",
         "review", "literature review", "state of the art", "meta-analysis"
     ]
-    if any_term_matches(full_text, policy_signals):
+    if any_term_matches(full_text, policy_terms):
         return False
 
     if any_term_matches(full_text, ["asphalt", "asphaltic", "bitumen", "bituminous"]):
