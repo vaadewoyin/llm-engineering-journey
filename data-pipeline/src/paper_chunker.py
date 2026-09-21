@@ -1,4 +1,5 @@
-"""Downloads scientific paper and splits into text chunks for QA generation."""
+"""Downloads open-access papers from Semantic Scholar, converts PDFs to Markdown with Docling, and splits the methodology 
+and results/discussion sections into  chunks written as JSONL."""
 
 import html
 import json
@@ -24,6 +25,8 @@ urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 # Schematic scholar api key
 load_dotenv()
 S2_API_KEY = os.getenv('S2_API_KEY')
+if not S2_API_KEY:
+    raise RuntimeError("S2_API_KEY not found in environment / .env")
 
 
 def any_term_matches(text, terms):
@@ -594,8 +597,9 @@ def process_paper_pipeline(api_key, materials_list, paper_count_per_material,
                         if chunk_metadata:
                             f.write(json.dumps(chunk_metadata, ensure_ascii=False) + "\n")
 
-        except Exception:
-            continue
+        except Exception as e:
+               print(f"Skip {downloaded_paper.name}: {e}")
+               continue
 
     # Count total number of processed chunks
     with open(chunk_path, "r") as f:
@@ -609,60 +613,60 @@ def process_paper_pipeline(api_key, materials_list, paper_count_per_material,
 
 
 # RUN PIPELINE
+if __name__ == "__main__":
+    # Create necessary file paths
+    DATA_DIR = Path("data")
+    DATA_DIR.mkdir(parents=True, exist_ok=True)
 
-# Create necessary file paths
-DATA_DIR = Path("data")
-DATA_DIR.mkdir(parents=True, exist_ok=True)
-
-PAPER_DIR = DATA_DIR / "papers"
-PAPER_DIR.mkdir(parents=True, exist_ok=True)
+    PAPER_DIR = DATA_DIR / "papers"
+    PAPER_DIR.mkdir(parents=True, exist_ok=True)
 
 
-METADATA_PATH = DATA_DIR / "downloaded_paper_metadata.jsonl"
-CHUNK_PATH = DATA_DIR / "chunks.jsonl"
+    METADATA_PATH = DATA_DIR / "downloaded_paper_metadata.jsonl"
+    CHUNK_PATH = DATA_DIR / "chunks.jsonl"
 
-# Materials list 
-MATERIALS = [
-    # Industrial by-products
-    ("fly ash", "ground granulated blast furnace slag", "silica fume", "steel slag",
-     "copper slag", "metakaolin", "calcined clay", "volcanic ash", "glass powder"),
+    # Materials list 
+    MATERIALS = [
+        # Industrial by-products
+        ("fly ash", "ground granulated blast furnace slag", "silica fume", "steel slag",
+        "copper slag", "metakaolin", "calcined clay", "volcanic ash", "glass powder"),
 
-    # Agricultural waste ashes
-    ("rice husk ash", "rice straw ash", "palm oil fuel ash", "oil palm fibre ash",
-     "sugarcane bagasse ash", "coconut shell ash", "palm kernel shell ash",
-     "cassava peel ash", "corn cob ash", "corn stalk ash", "groundnut shell ash",
-     "bamboo leaf ash", "bamboo ash", "sawdust ash", "wood ash", "eggshell powder",
-     "plantain peel ash", "banana leaf ash", "bean pod ash", "cocoa pod ash",
-     "cocoa shell ash", "cotton stalk ash", "wheat straw ash"),
+        # Agricultural waste ashes
+        ("rice husk ash", "rice straw ash", "palm oil fuel ash", "oil palm fibre ash",
+        "sugarcane bagasse ash", "coconut shell ash", "palm kernel shell ash",
+        "cassava peel ash", "corn cob ash", "corn stalk ash", "groundnut shell ash",
+        "bamboo leaf ash", "bamboo ash", "sawdust ash", "wood ash", "eggshell powder",
+        "plantain peel ash", "banana leaf ash", "bean pod ash", "cocoa pod ash",
+        "cocoa shell ash", "cotton stalk ash", "wheat straw ash"),
 
-    # Alternative / waste aggregates
-    ("palm kernel shell", "coconut shell", "recycled concrete aggregate",
-     "recycled brick aggregate", "recycled ceramic aggregate",
-     "recycled glass aggregate", "waste tyre aggregate", "rubber aggregate",
-     "recycled plastic aggregate"),
+        # Alternative / waste aggregates
+        ("palm kernel shell", "coconut shell", "recycled concrete aggregate",
+        "recycled brick aggregate", "recycled ceramic aggregate",
+        "recycled glass aggregate", "waste tyre aggregate", "rubber aggregate",
+        "recycled plastic aggregate"),
 
-    # Alternative natural / waste fibres
-    ("coconut fibre", "coir fibre", "palm fibre", "sisal fibre", "jute fibre",
-     "hemp fibre", "kenaf fibre", "bamboo fibre", "sugarcane bagasse fibre",
-     "waste textile fibre"),
+        # Alternative natural / waste fibres
+        ("coconut fibre", "coir fibre", "palm fibre", "sisal fibre", "jute fibre",
+        "hemp fibre", "kenaf fibre", "bamboo fibre", "sugarcane bagasse fibre",
+        "waste textile fibre"),
 
-    # Other recycled / waste-derived materials
-    ("ceramic waste powder", "waste ceramic powder", "marble dust",
-     "granite powder", "quarry dust", "red mud", "paper sludge ash",
-     "waste paper ash"),
-]
+        # Other recycled / waste-derived materials
+        ("ceramic waste powder", "waste ceramic powder", "marble dust",
+        "granite powder", "quarry dust", "red mud", "paper sludge ash",
+        "waste paper ash"),
+    ]
 
-MATERIALS_FLAT = [item for group in MATERIALS for item in group]
+    MATERIALS_FLAT = [item for group in MATERIALS for item in group]
 
-# Tokenizer
-GPT_TOKENIZER = tiktoken.encoding_for_model("gpt-5")
+    # Tokenizer
+    GPT_TOKENIZER = tiktoken.get_encoding("o200k_base")
 
-process_paper_pipeline(
-    api_key=S2_API_KEY,
-    materials_list=MATERIALS_FLAT,
-    paper_count_per_material=5, 
-    downloaded_paper_dir=PAPER_DIR,
-    metadata_path=METADATA_PATH,
-    tokenizer=GPT_TOKENIZER,
-    chunk_path=CHUNK_PATH
-)
+    process_paper_pipeline(
+        api_key=S2_API_KEY,
+        materials_list=MATERIALS_FLAT,
+        paper_count_per_material=5, 
+        downloaded_paper_dir=PAPER_DIR,
+        metadata_path=METADATA_PATH,
+        tokenizer=GPT_TOKENIZER,
+        chunk_path=CHUNK_PATH
+    )
