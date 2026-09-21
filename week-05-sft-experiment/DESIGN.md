@@ -1,14 +1,14 @@
 # DESIGN.md
 
 ## 1. Problem
-Fine-tuning a small language model on Q&A pairs generated from ArXiv ML abstracts to teach the model how to respond to ML questions.
+Choosing an approriate rank for fine-tuning a small language model on Q&A pairs generated from ArXiv ML abstracts inother to teach the model how to respond to ML questions.
 
 ## 2. Components
-- `main.py` — For SFT on a small language model + evaluating the fine-tuned model.
-- `baseline_eval_config.json` — Contains the config used in fine-tuning the model, such as data split, random seed, etc.
+- `main.py` — For conducting the LoraRank analysis 
+- `baseline_eval_config.json` — Contains the config used in Lora rank analysis for fine-tuning the model, such as data split, random seed, etc.
 
 ## 3. Component Communication
-`main.py` loads data & config from `data/qa_pairs.jsonl` and `configs/baseline_eval_config.json`, uses it to fine-tune the model, saves the fine-tuned model to `output/` and also performs evaluation of the fine-tuned model
+`main.py` loads config & data from `configs/baseline_eval_config.json` and  `configs/baseline_eval_config.json`uses it to fine-tune the model, saves the fine-tuned model to `output/` and also performs evaluation of the fine-tuned model
 
 ## 4. Failure Modes
 1. OOM error can occur if the model is too large for available GPU memory — triggered when batch size × sequence length exceeds VRAM. Recovery: reduce batch size, enable gradient checkpointing.

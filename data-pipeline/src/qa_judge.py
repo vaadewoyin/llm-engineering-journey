@@ -1,14 +1,11 @@
+"""Judge generated QA pairs against their source chunks.
 
+Scores each pair on factual correctness, groundedness, question relevance,
+answer quality, and technical accuracy, and routes the result to keep,
+borderline, or reject. Output is written as JSONL.
 """
-Judges generated QA pairs using Gemma 4
-"""
 
-PROJECT_NAME = "sustainable-conc-papers-qa-filtering"
-
-# Necessary imports
 import json
-from pathlib import Path
-import torch
 from unsloth import FastLanguageModel
 import opik
 from opik import track
@@ -163,7 +160,7 @@ def create_qa_prompts(qa_pairs, tokenizer):
         qa_prompts.append(qa_prompt)
     return qa_prompts
 
-@track(name=PROJECT_NAME)#, ignore_arguments=["batch_chunks"])
+#@track(name=PROJECT_NAME)#, ignore_arguments=["batch_chunks"])
 def generate_batch(batch_prompts, model, tokenizer, max_new_tokens):
 
     inputs = tokenizer(batch_prompts,

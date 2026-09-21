@@ -1,9 +1,4 @@
-"""
-Generates chunks for QA pair generation
-
-Downloads papers from semantic scholar, saves papers and metadata to disk,
-extract chunks from each relevant sections per paper for QA pair generation
-"""
+"""Downloads scientific paper and splits into text chunks for QA generation."""
 
 import html
 import json

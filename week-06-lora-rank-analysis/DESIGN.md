@@ -13,7 +13,7 @@ To find the inflection point where increasing LoRA rank parameter ceases to impr
 ## 4. Failure Modes
 1. OOM error can occur if the model is too large for available GPU memory — triggered when batch size × sequence length exceeds VRAM. Recovery: reduce batch size, enable gradient checkpointing.
 2. Logging errors due to improper Comet ML setup — triggered when API key is missing or network is blocked. Recovery: set `report_to="none"` and log locally.
-3. Model fine-tuning gets interrupted during the process — triggered by Kaggle session timeout or manual stop. Recovery: restart the run for that rank from scratch (since rank sweep runs are short, checkpoint recovery is not needed).
+3. Model fine-tuning gets interrupted during the process — triggered by Kaggle session timeout or manual stop. Recovery: because each run is short (~45 min) and the total sweep (~3 hours) fits within a Kaggle session, checkpointing is omitted to keep the script simple. If interrupted, only the affected rank needs to be restarted.
 
 ## 5. Definition of Done
 1. Rank vs perplexity curve plotted.
@@ -32,23 +32,23 @@ To find the inflection point where increasing LoRA rank parameter ceases to impr
 2. Logging to Comet ML is also done using Python.
 3. Evaluation.
 4. The learning rate value (fixed at 3e‑4).
-5. The rank value (fixed per run: 8, 16, 32, 64).
+5. The rank value (fixed per run: 8, 16, 32, 64). 
 6. The train/validation split (fixed by seed=42).
 
 ### Human inspection point
 To check what the system did, the user can check the Comet ML dashboard for all logging info, which includes charts for loss & training curve, and all other metrics. The final models and adapter files are saved in `outputs/rank-{r}/final_model/` for inspection.
 
 ### State representation
-The dataset is stored as a JSONL file (`filtered_703.jsonl`), the configuration is stored in `baseline_eval_config.json`. Training metrics (loss curves, gradient norms, GPU memory) are logged to Comet ML. The final model and adapter for each rank are saved as files in `outputs/rank-{r}/final_model/`. The results table (rank vs perplexity) is written as a Markdown file for easy viewing. 
+The dataset is stored as a JSONL file (`filtered_703.jsonl`), the configuration is stored in `baseline_eval_config.json`. Training metrics (loss curves, gradient norms, GPU memory) are logged to Comet ML. The final model and adapter for each rank are saved as files in `outputs/rank-{r}/final_model/`. The results table (rank vs perplexity) is written as a Markdown file for easy viewing.
 
 ### Serial vs parallel
-The entire rank sweep is done serially. Each rank (r=8, 16, 32, 64) is trained one after the other, not in parallel. This avoids memory contention and makes the logs easier to follow. Since each run takes ~45 minutes, the total time is about 3 hours, which is acceptable for a single Kaggle session.
+The entire rank sweep is done serially. Each rank (r=8, 16, 32, 64) is trained one after the other, not in parallel. This avoids memory contention and makes the logs easier to follow. 
 
 ## 7. Pre-Build Questions
 
 **Before running: which rank do you predict will win, and why? Write the prediction with a reason.**
 
-r=8 should have better performance than the remaining ranks (r=16, r=32, r=64). Reason: rank in LoRA generally represents adapter capacity. The higher the rank, the more the capacity of the adapters and the better the fine-tuning result technically. However, there is also more risk of overfitting. In our dataset with less than 1000 Q&A pairs that are obtained from relatively short abstracts, higher values of rank are more likely to overfit owing to the simple nature of the dataset. r=8, being smaller than the other rank values, should have less overfit than the remaining.
+I predict r=8 will have the lowest perplexity because higher ranks (r=32, r=64) are more likely to overfit on our small dataset of 703 Q&A pairs derived from short abstracts. 
 
 **What is the mathematical relationship between rank r, alpha, and the effective learning rate?**
 
@@ -60,18 +60,9 @@ It tells me that the rank-quality curve has flattened. Increasing rank beyond 32
 
 **LoRA adds adapter matrices. Where exactly do they attach in a transformer? Why those layers?**
 
-Adapters attach in the attention layer and MLP layer. Attention layers because that is where the model gets contextual understanding of each token, so we typically attach it there. We also attach in the MLP layer because that is where information about what the token means is used to do the actual prediction of the next token.
+In this implementation, LoRA adapters are attached to seven modules: `q_proj`, `k_proj`, `v_proj`, `o_proj` in the attention layers, and `gate_proj`, `up_proj`, `down_proj` in the MLP layers. These are chosen because they cover the key projection and feed‑forward transformations that are most influential for task adaptation. Targeting both attention and MLP gives more capacity for learning domain‑specific patterns, while still being efficient.
 
 **Your comparison table has 4 runs. A recruiter asks: what is the engineering conclusion? One sentence.**
 
 The optimal rank for this dataset and model is r=8, as higher ranks show no significant improvement and increase memory usage.
 
-## 8. Known Limitations
-
-**What does this system not handle?**
-1. The system does not handle fine-tuning of a large model.
-2. It does not generate reasoning traces (Thinking SFT) or agentic tool-use patterns.
-
-**What would break it that you are aware of right now?**
-1. Loading a large model will break the system because it will lead to an out-of-memory error.
-2. Missing or incorrect chat template in the tokenizer will prevent the model from learning proper turn boundaries.

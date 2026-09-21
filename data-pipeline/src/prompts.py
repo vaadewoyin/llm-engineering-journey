@@ -1,12 +1,9 @@
+"""System prompt templates for the QA pipeline.
 
+Holds the instruction prompts used by the generation and judging stages.
+"""
 
-# Necessary imports
-import json
-from unsloth import FastLanguageModel
-import opik
-from opik import track
-
-SYSTEM_PROMPT = """
+QA_GENERATION_SYSTEM_PROMPT  = """
 You are an expert civil engineer and scientific QA dataset generator specializing
 in sustainable concrete, alternative cementitious materials, supplementary
 cementitious materials, agricultural and industrial waste materials, recycled
@@ -229,7 +226,7 @@ The answer must:
 - contain only information supported by the chunk;
 - preserve numerical values, percentages, and units accurately;
 - be scientifically precise;
-- normally be 1–3 sentences;
+- normally be 1-3 sentences;
 - avoid unnecessary background, repetition, or padding.
 
 Do not add outside scientific knowledge.
@@ -317,188 +314,97 @@ FINAL SILENT CHECK:
 Only return the final JSON.
 """
 
-# User prompt
-def build_user_prompt(chunk_id, chunk_text):
-    return f"""
-Analyze the following scientific chunk according to your instructions.
 
-<<<
-{chunk_text}
->>>
+QA_JUDGE_SYSTEM_PROMPT = """
+You are a strict quality-control judge for a scientific question-answer dataset about concrete, cement, mortar, geopolymer materials, and sustainable/alternative concrete materials.
+
+You will receive a source chunk and a generated question-answer pair.
+
+Your task is to evaluate the generated question and answer ONLY against the supplied source chunk.
+
+Evaluate the following five criteria:
+
+1. Factual correctness (1-5)
+- Is the answer factually consistent with the source chunk?
+- Does it contain any incorrect claims?
+- Numerical values, percentages, units, and experimental results must be represented correctly.
+- If the answer contradicts the source, score 1.
+
+2. Groundedness (1-5)
+- Can the answer be directly supported by information in the source chunk?
+- Penalize unsupported inference or information that cannot reasonably be derived from the source.
+- If the answer introduces information that is not supported by the source, score 2 or lower.
+- Do not penalize a reasonable interpretation that follows directly from the information in the source.
+
+3. Question relevance (1-5)
+- Does the question ask about information actually contained in the source chunk?
+- If the question cannot be answered from the source chunk, score 1.
+- If the question addresses a key finding, relationship, result, or interpretation from the source, score 5.
+- If the question concerns a minor but valid detail from the source, score 3 or 4.
+- The question must be answerable using the supplied source chunk.
+
+4. Answer quality (1-5)
+- Is the answer clear, precise, complete, and directly responsive to the question?
+- Penalize vague, incomplete, confusing, or unnecessarily verbose answers.
+- Accept minor paraphrasing as long as the meaning is preserved.
+- The answer should contain enough information to properly answer the question without adding irrelevant information.
+
+5. Technical accuracy (1-5)
+- Are technical terms, materials, experimental results, units, percentages, values, and relationships represented correctly?
+- Penalize incorrect units, misstated relationships, incorrect numerical values, or misinterpretation of experimental findings.
+- Do not accept technically plausible information that is not supported by the source.
+
+IMPORTANT RULES:
+- Judge ONLY from the supplied source chunk.
+- Do not use outside knowledge to fill missing information.
+- If the source does not provide enough information to answer the question, score the QA accordingly.
+- Do not reward an answer simply because it sounds scientifically plausible.
+- A question may be rejected even if its answer is correct if the question itself is not sufficiently grounded in the source.
+- Minor wording differences are acceptable if the meaning remains faithful to the source.
+- Distinguish between a reasonable interpretation of the source and an unsupported inference.
+- Pay particular attention to numerical values, percentages, units, material proportions, experimental conditions, and reported trends.
+
+OVERALL SCORE:
+The overall score should reflect the overall quality of the QA pair. Do not simply average the five scores.
+
+Give particular importance to:
+- factual correctness
+- groundedness
+- technical accuracy
+
+A serious weakness in any of these core dimensions should lower the overall score.
+
+Overall score:
+5 = Excellent QA with no meaningful weaknesses
+4 = Good QA with only minor weaknesses
+3 = Acceptable but has a noticeable weakness
+2 = Poor QA with a significant problem
+1 = Unacceptable QA
+
+DECISION RULES:
+- "keep": All five criteria are ≥ 4 and the QA is substantively correct and well grounded.
+- "borderline": No criterion is ≤ 2, but at least one criterion is 3. These require manual review.
+- "reject": Any criterion is ≤ 2, or there is a substantive factual, grounding, relevance, or technical problem.
+
+Return ONLY valid JSON in exactly this format:
+
+{
+  "factual_correctness": 1-5,
+  "groundedness": 1-5,
+  "question_relevance": 1-5,
+  "answer_quality": 1-5,
+  "technical_accuracy": 1-5,
+  "overall_score": 1-5,
+  "decision": "keep" or "borderline" or "reject",
+  "reason": "Brief explanation of the main reason for the score and decision."
+}
+
+SOURCE CHUNK:
+{chunk}
+
+GENERATED QUESTION:
+{question}
+
+GENERATED ANSWER:
+{answer}
 """
-
-def load_jsonl(file_path):
-    """Load all lines from a JSONL file."""
-    with open(file_path, "r", encoding="utf-8") as f:
-        return [json.loads(line) for line in f]
-
-def save_jsonl(file_path, data, overwrite=True):
-    """Write a list of dicts to a JSONL file"""
-    mode = "w" if overwrite else "a"
-    with open(file_path, mode, encoding="utf-8") as f:
-        for item in data:
-            f.write(json.dumps(item, ensure_ascii=False) + "\n")
-
-def filter_chunks(chunks_path, filtered_path, token_threshold=150):
-    """Filter chunks by token count and save to a new file"""
-    chunks = load_jsonl(chunks_path)
-    kept = []
-    removed = 0
-    for chunk in chunks:
-        if chunk.get("token_count", 0) >= token_threshold:
-            kept.append(chunk)
-        else:
-            removed += 1
-    save_jsonl(filtered_path, kept)
-    print(f"Kept: {len(kept)} chunks, Removed: {removed} chunks (threshold {token_threshold})")
-    return len(kept), removed
-
-def add_global_id(input_path, output_path, id_format="{:04d}"):
-    """Add a unique global_id to each chunk and save to a new file."""
-    chunks = load_jsonl(input_path)
-    for idx, chunk in enumerate(chunks, start=1):
-        chunk["global_id"] = f"chunk_{id_format.format(idx)}"
-    save_jsonl(output_path, chunks)
-    print(f"Added global IDs to {len(chunks)} chunks")
-    return chunks
-
-def process_chunks(chunks_path, filtered_path, final_path, token_threshold=150):
-    """Run filtering and ID assignment."""
-    kept, removed = filter_chunks(chunks_path, filtered_path, token_threshold)
-    add_global_id(filtered_path, final_path)
-    print(f"Final file: {final_path}")
-
-# Create prompts
-def create_prompts(chunks, tokenizer):
-    prompts = []
-    for chunk in chunks:
-        chunk_id = chunk["chunk_id"]
-        chunk_text = chunk["text"]
-        user_prompt = build_user_prompt(chunk_id, chunk_text)
-        messages = [
-        {"role": "system", "content": f"{SYSTEM_PROMPT}"},
-        {"role": "user", "content": f"{user_prompt}"}
-        ]
-        chunk_prompt = tokenizer.apply_chat_template(
-            messages,
-            tokenize =False,
-            add_generation_prompt = True,
-            add_special_tokens = True,
-            enable_thinking=False
-        )
-        prompts.append(chunk_prompt)
-    return prompts
-
-def sort_prompts(chunks, prompts):
-    """Sort chunks and prompts by token count"""
-    combined = [
-        (chunk["token_count"], chunk, prompt)
-        for chunk, prompt in zip(chunks, prompts)
-    ]
-    combined.sort(key=lambda x: x[0])
-    chunks_sorted = [item[1] for item in combined]
-    prompts_sorted = [item[2] for item in combined]
-    return chunks_sorted, prompts_sorted
-
-@track
-def batch_qa_generation(chunks, prompts, model, tokenizer,
-                        batch_size, max_length, max_new_tokens,
-                        chunk_metadata_keys, qa_save_dir):
-    qa_results = []
-
-    for i in range(0, len(prompts), batch_size):
-        batch_prompts = prompts[i:i+batch_size]
-        batch_chunks = chunks[i:i+batch_size]
-
-        inputs = tokenizer(batch_prompts,
-                          return_tensors="pt",
-                          truncation=True,
-                          padding=True,
-                          padding_side="left",
-                          max_length=max_length).to("cuda")
-
-        outputs = model.generate(
-                    **inputs,
-                    max_new_tokens=max_new_tokens,
-                    temperature=0.7,
-                    top_p=0.80,
-                    top_k=20,
-                    min_p=0.0,
-                    #presence_penalty=1.5,
-                    repetition_penalty=1.0,
-                    do_sample=True,
-                )
-        for idx, chunk in enumerate(batch_chunks):
-            batch_input_length = inputs['input_ids'].shape[1]
-            sample_generated_tokens = outputs[idx][batch_input_length:]
-            response_text = tokenizer.decode(sample_generated_tokens, skip_special_tokens=True)
-            response_json = json.loads(response_text)
-
-            if isinstance(response_json, list) and len(response_json) >= 1:
-                for qa in response_json:
-                    for key in chunk_metadata_keys:
-                        qa[key] = chunk[key]
-                    qa_results.append(qa)
-
-    # Write qa_results to jsonl
-    with open(qa_save_dir, "w") as f:
-        for qa in qa_results:
-            f.write(json.dumps(qa, ensure_ascii=False) + "\n")
-
-def run_pipeline():
-    #COMET_ML_KEY 
-
-    # Config
-    PROJECT_NAME = "sustainable-conc-papers-qa-gen-demo" #"sustainable-conc-papers-qa-gen"
-    MODEL_NAME = "unsloth/Qwen3-8B-bnb-4bit" #"unsloth/Qwen3.8-27B-unsloth-bnb-4bit"
-
-    MAX_INPUT_TOKENS = 4096
-    MAX_NEW_TOKENS = 512
-    MAX_SEQ_LENGTH = 6144
-    BATCH_SIZE = 4
-
-    CHUNKS_PATH = "chunks.jsonl"
-    FILTERED_PATH = "filtered_chunks.jsonl"
-    FINAL_CHUNKS_PATH = "filtered_chunks_final.jsonl"
-    QA_PAIRS_PATH = "qa_pairs.jsonl"
-
-    METADATA_KEYS = [
-        "text", "global_id", "paper_id",
-        "paper_title", "paper_year", "paper_url",
-        "downloaded_paper_name", "section"
-    ]
-
-    # Opik config
-    opik.configure(
-        #api_key=COMET_ML_KEY,
-        project_name=PROJECT_NAME,
-        use_local=False,
-        workspace="vaadewoyin"        # Comet workspace name
-    )
-
-    # Load model and tokenizer
-    model, tokenizer = FastLanguageModel.from_pretrained(
-        model_name = MODEL_NAME,
-        max_seq_length = MAX_SEQ_LENGTH,
-        dtype = None,
-        load_in_4bit = True,
-        device_map="auto"
-    )
-
-
-    process_chunks(CHUNKS_PATH, FILTERED_PATH,
-                   FINAL_CHUNKS_PATH, token_threshold=150)
-
-    chunks = load_jsonl(FINAL_CHUNKS_PATH)
-    prompts = create_prompts(chunks, tokenizer)
-    chunks_sorted, prompts_sorted = sort_prompts(chunks, prompts)
-
-    batch_qa_generation(chunks=chunks_sorted,
-                        prompts=prompts_sorted,
-                        model=model,
-                        tokenizer=tokenizer,
-                        batch_size=BATCH_SIZE,
-                        max_length=MAX_INPUT_TOKENS,
-                        max_new_tokens = MAX_NEW_TOKENS,
-                        chunk_metadata_keys=METADATA_KEYS,
-                        qa_save_dir=QA_PAIRS_PATH)
