@@ -45,3 +45,28 @@ class QAConfig:
         "downloaded_paper_name", "section",
     ])
 
+
+@dataclass
+class JudgeConfig:
+    project_name: str = "sustainable-conc-papers-qa-filtering-demo"
+    model_name:   str = "unsloth/gemma-4-E2B-it"
+    workspace:    str = "vaadewoyin"
+
+    max_seq_length:   int = 6144
+    max_input_tokens: int = 4096
+    max_new_tokens:   int = 512
+    batch_size:       int = 4
+
+    temperature: float = 1.0
+    top_p:       float = 0.95
+    top_k:       int   = 64
+
+    qa_pairs_path:     Path = DATA_DIR / "qa_pairs.jsonl"
+    judged_pairs_path: Path = DATA_DIR / "judged_qa_pairs.jsonl"
+
+    metadata_keys: list[str] = field(default_factory=lambda: [
+        "question", "answer", "global_id", "paper_id",
+        "paper_title", "paper_year", "paper_url",
+        "downloaded_paper_name", "chunk_id", "section",
+    ])
+
