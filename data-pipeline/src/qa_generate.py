@@ -189,7 +189,7 @@ def generate_batch(batch_prompts, model, tokenizer, cfg: QAConfig):
 @track(capture_input=False, capture_output=False)
 def batch_qa_generation(chunks, prompts, model, tokenizer, cfg: QAConfig,
                         checkpoint_every=5):
-    bad_path = cfg.qa_pairs_path.replace(".jsonl", "_bad.jsonl")
+    bad_path = str(cfg.qa_pairs_path).replace(".jsonl", "_bad.jsonl")
     qa_written = 0
 
     num_batches = (len(prompts) + cfg.batch_size - 1) // cfg.batch_size
