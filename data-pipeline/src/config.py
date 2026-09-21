@@ -3,8 +3,12 @@
 Defines QAConfig, a dataclass holding every tunable in the QA pipeline:
 model name, sequence lengths, sampling parameters, file paths, and metadata keys.
 """
-
+from pathlib import Path
 from dataclasses import dataclass, field
+
+
+ROOT = Path(__file__).resolve().parent.parent
+DATA_DIR = ROOT / "data"
 
 @dataclass
 class QAConfig:
@@ -29,12 +33,10 @@ class QAConfig:
     min_p:       float = 0.0
     
     # paths
-    chunks_path:       str = "chunks.jsonl"
-    filtered_path:     str = "filtered_chunks.jsonl"
-    final_chunks_path: str = "filtered_chunks_final.jsonl"
-    qa_pairs_path:     str = "qa_pairs.jsonl"
-
-    
+    chunks_path:       Path = DATA_DIR / "chunks.jsonl"
+    filtered_path:     Path = DATA_DIR / "filtered_chunks.jsonl"
+    final_chunks_path: Path = DATA_DIR / "filtered_chunks_final.jsonl"
+    qa_pairs_path:     Path = DATA_DIR / "qa_pairs.jsonl"
 
     # metadata propagated into each QA record 
     metadata_keys: list[str] = field(default_factory=lambda: [
