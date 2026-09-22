@@ -25,7 +25,6 @@ JUDGE_CFG = JudgeConfig()
 
 
 # JSON helpers (strict)
-
 def extract_json_object(text):
 
     if not text:
@@ -50,7 +49,6 @@ def extract_json_object(text):
 
 
 # Prompt building
-
 def build_user_prompt(qa):
     return f"""
 Evaluate the following generated question-answer pair against the source chunk.
@@ -90,8 +88,8 @@ def create_qa_prompts(qa_pairs, tokenizer):
         }
         user_prompt = build_user_prompt(qa)
         messages = [
-            {"role": "system", "content": [{"type": "text", "text": JUDGE_SYSTEM_PROMPT}]},
-            {"role": "user",   "content": [{"type": "text", "text": user_prompt}]},
+            {"role": "system", "content": JUDGE_SYSTEM_PROMPT},
+            {"role": "user", "content": user_prompt},
         ]
         prompt = tokenizer.apply_chat_template(
             messages,
@@ -121,7 +119,7 @@ def generate_batch(batch_prompts, model, tokenizer, cfg: JudgeConfig):
         temperature=cfg.temperature,
         top_p=cfg.top_p,
         top_k=cfg.top_k,
-        do_sample=True,
+        do_sample=False,
     )
 
     input_len = inputs["input_ids"].shape[1]
