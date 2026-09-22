@@ -13,8 +13,8 @@ DATA_DIR = ROOT / "data"
 @dataclass
 class QAConfig:
     # project 
-    project_name: str = "sustainable-conc-papers-qa-gen-demo"
-    model_name:   str = "unsloth/Qwen3-8B-bnb-4bit"
+    project_name: str = "llm-engineering-journey-data-gen"
+    model_name:   str = "unsloth/Qwen3.8-27B-FP8"
     workspace:    str = "vaadewoyin"
 
     # context / generation 
@@ -48,18 +48,18 @@ class QAConfig:
 
 @dataclass
 class JudgeConfig:
-    project_name: str = "sustainable-conc-papers-qa-filtering-demo"
-    model_name:   str = "unsloth/gemma-4-E2B-it"
+    project_name: str = "llm-engineering-journey-data-judge"
+    model_name:   str = "unsloth/phi-4"
     workspace:    str = "vaadewoyin"
 
     max_seq_length:   int = 6144
     max_input_tokens: int = 4096
-    max_new_tokens:   int = 512
+    max_new_tokens:   int = 256
     batch_size:       int = 4
 
-    temperature: float = 1.0
-    top_p:       float = 0.95
-    top_k:       int   = 64
+    temperature: float = 0
+    top_p:       float = 1
+    top_k:       int   = -1
 
     qa_pairs_path:     Path = DATA_DIR / "qa_pairs.jsonl"
     judged_pairs_path: Path = DATA_DIR / "judged_qa_pairs.jsonl"
