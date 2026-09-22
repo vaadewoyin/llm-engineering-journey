@@ -193,6 +193,8 @@ def batch_qa_generation(chunks, prompts, model, tokenizer, cfg: QAConfig,
     qa_written = 0
 
     num_batches = (len(prompts) + cfg.batch_size - 1) // cfg.batch_size
+    tokenizer.padding_side = "left"
+
 
     with open(cfg.qa_pairs_path, "w", encoding="utf-8") as f_out, \
          open(bad_path,          "w", encoding="utf-8") as f_bad, \
@@ -263,7 +265,7 @@ def run_pipeline(cfg: QAConfig = CFG):
         model_name=cfg.model_name,
         max_seq_length=cfg.max_seq_length,
         dtype=None,
-        load_in_4bit=True,
+        load_in_4bit=False,   # FP8 model is already quantized,
         device_map="auto",
     )
 
