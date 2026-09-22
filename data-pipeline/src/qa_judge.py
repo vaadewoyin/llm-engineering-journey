@@ -90,8 +90,8 @@ def create_qa_prompts(qa_pairs, tokenizer):
         }
         user_prompt = build_user_prompt(qa)
         messages = [
-            {"role": "system", "content": JUDGE_SYSTEM_PROMPT},
-            {"role": "user",   "content": user_prompt},
+            {"role": "system", "content": [{"type": "text", "text": JUDGE_SYSTEM_PROMPT}]},
+            {"role": "user",   "content": [{"type": "text", "text": user_prompt}]},
         ]
         prompt = tokenizer.apply_chat_template(
             messages,
