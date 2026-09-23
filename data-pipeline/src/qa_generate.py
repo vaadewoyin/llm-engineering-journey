@@ -1,17 +1,17 @@
 """Generate question-answer pairs from scientific chunks.
 
-Loads a quantized Qwen3 model, builds chat-templated prompts for each chunk,
-and generates one grounded QA pair per chunk.
+Loads a quantized Qwen3 model via vLLM, builds chat-templated prompts for
+each chunk, and generates one grounded QA pair per chunk.
 """
-
 
 # Imports
 import json
 import os
 import re
+from itertools import islice
 
-import torch
-from unsloth import FastLanguageModel
+from vllm import LLM, SamplingParams
+from transformers import AutoTokenizer
 import opik
 from opik import track
 from dotenv import load_dotenv
@@ -22,8 +22,16 @@ from prompts import QA_GENERATION_SYSTEM_PROMPT as SYSTEM_PROMPT
 # Config & secrets
 load_dotenv()
 COMET_ML_KEY = os.getenv("COMET_API_KEY")
-HF_TOKEN =  os.getenv("HF_TOKEN")
-CFG = QAConfig() 
+HF_TOKEN = os.getenv("HF_TOKEN")
+CFG = QAConfig()
+
+
+# Batching helper
+def chunked(iterable, size):
+    """Yield successive chunks of `size` items from `iterable`."""
+    it = iter(iterable)
+    while batch := list(islice(it, size)):
+        yield batch
 
 
 # JSON parsing helpers
@@ -33,10 +41,8 @@ def extract_json_array(text):
 
     text = text.strip()
 
-    # Strip a single markdown fence if present — the one artifact chat
-    # models emit even when told not to.
     fence = re.search(r"```(?:json)?\s*(.*?)```", text,
-                      flags=re.DOTALL | re.IGNORECASE)
+                       flags=re.DOTALL | re.IGNORECASE)
     if fence:
         text = fence.group(1).strip()
 
@@ -58,7 +64,7 @@ def build_user_prompt(chunk_text):
     return f"""
 Analyze the following scientific chunk according to your instructions.
 
-<<<
+<
 {chunk_text}
 >>>
 """
@@ -72,11 +78,13 @@ def load_jsonl(file_path, limit=None):
         lines = lines[:limit]
     return [json.loads(line) for line in lines]
 
+
 def save_jsonl(file_path, data, overwrite=True):
     mode = "w" if overwrite else "a"
     with open(file_path, mode, encoding="utf-8") as f:
         for item in data:
             f.write(json.dumps(item, ensure_ascii=False) + "\n")
+
 
 # Chunk processing
 def filter_chunks(chunks_path, filtered_path, token_threshold=150):
@@ -111,7 +119,6 @@ def process_chunks(chunks_path, filtered_path, final_path, token_threshold=150):
     print(f"Final file: {final_path}")
 
 
-
 # Prompt creation
 def create_prompts(chunks, tokenizer):
     prompts = []
@@ -133,20 +140,6 @@ def create_prompts(chunks, tokenizer):
     return prompts
 
 
-def check_prompt_lengths(chunks, prompts, tokenizer, max_length):
-    """Warn about prompts that will be truncated at generation time."""
-    over = 0
-    for chunk, prompt in zip(chunks, prompts):
-        n = len(tokenizer(prompt, truncation=False)["input_ids"])
-        if n > max_length:
-            over += 1
-            print(f"TRUNCATION: {chunk.get('global_id')} "
-                  f"is {n} tokens, will be cut to {max_length}")
-    if over:
-        print(f"{over} prompts will be truncated.")
-    return over
-
-
 def sort_prompts(chunks, prompts):
     combined = sorted(
         zip(chunks, prompts),
@@ -158,58 +151,44 @@ def sort_prompts(chunks, prompts):
 
 
 # Generation
-# ---------------------------------------------------------------------------
 @track(name=f"{CFG.project_name}-generate")
-def generate_batch(batch_prompts, model, tokenizer, cfg: QAConfig):
-    inputs = tokenizer(
-        batch_prompts,
-        return_tensors="pt",
-        truncation=True,
-        padding=True,
-        max_length=cfg.max_input_tokens,
-    ).to("cuda")
+def generate_batch(batch_prompts, llm, sampling_params):
+    """One call to vLLM — it handles internal batching/scheduling itself."""
+    outputs = llm.generate(batch_prompts, sampling_params, use_tqdm=False)
+    return [o.outputs[0].text for o in outputs]
 
-    outputs = model.generate(
-        **inputs,
-        max_new_tokens=cfg.max_new_tokens,
+
+@track(capture_input=False, capture_output=False)
+def batch_qa_generation(chunks, prompts, llm, cfg: QAConfig,
+                         checkpoint_every=5):
+
+    bad_path = str(cfg.qa_pairs_path).replace(".jsonl", "_bad.jsonl")
+    qa_written = 0
+
+    sampling_params = SamplingParams(
         temperature=cfg.temperature,
         top_p=cfg.top_p,
         top_k=cfg.top_k,
         min_p=cfg.min_p,
-        do_sample=True,
+        max_tokens=cfg.max_new_tokens,
     )
 
-    input_len = inputs["input_ids"].shape[1]
-    return [
-        tokenizer.decode(outputs[i][input_len:], skip_special_tokens=True)
-        for i in range(len(batch_prompts))
-    ]
-
-
-@track(capture_input=False, capture_output=False)
-def batch_qa_generation(chunks, prompts, model, tokenizer, cfg: QAConfig,
-                        checkpoint_every=5):
-    bad_path = str(cfg.qa_pairs_path).replace(".jsonl", "_bad.jsonl")
-    qa_written = 0
-
     num_batches = (len(prompts) + cfg.batch_size - 1) // cfg.batch_size
-    tokenizer.padding_side = "left"
-
 
     with open(cfg.qa_pairs_path, "w", encoding="utf-8") as f_out, \
-         open(bad_path,          "w", encoding="utf-8") as f_bad, \
-         torch.inference_mode():
+         open(bad_path, "w", encoding="utf-8") as f_bad:
 
-        for batch_idx, i in enumerate(range(0, len(prompts), cfg.batch_size)):
-            batch_prompts = prompts[i:i + cfg.batch_size]
-            batch_chunks  = chunks[i:i + cfg.batch_size]
+        prompt_batches = chunked(prompts, cfg.batch_size)
+        chunk_batches = chunked(chunks, cfg.batch_size)
+
+        for batch_idx, (batch_prompts, batch_chunks) in enumerate(
+                zip(prompt_batches, chunk_batches)):
 
             try:
                 responses = generate_batch(
                     batch_prompts=batch_prompts,
-                    model=model,
-                    tokenizer=tokenizer,
-                    cfg=cfg,
+                    llm=llm,
+                    sampling_params=sampling_params,
                 )
             except Exception as e:
                 print(f"[batch {batch_idx}] generation failed: {e}")
@@ -219,8 +198,8 @@ def batch_qa_generation(chunks, prompts, model, tokenizer, cfg: QAConfig,
                 parsed = extract_json_array(response_text)
                 if not parsed:
                     f_bad.write(json.dumps({
-                        "global_id":  chunk.get("global_id"),
-                        "chunk_id":   chunk.get("chunk_id"),
+                        "global_id": chunk.get("global_id"),
+                        "chunk_id": chunk.get("chunk_id"),
                         "raw_output": response_text,
                     }, ensure_ascii=False) + "\n")
                     continue
@@ -261,31 +240,28 @@ def run_pipeline(cfg: QAConfig = CFG):
         workspace=cfg.workspace,
     )
 
-    model, tokenizer = FastLanguageModel.from_pretrained(
-        model_name=cfg.model_name,
-        max_seq_length=cfg.max_seq_length,
-        dtype=None,
-        load_in_4bit=False,   # FP8 model is already quantized,
-        device_map="auto",
-        token=HF_TOKEN
+    tokenizer = AutoTokenizer.from_pretrained(cfg.model_name, token=HF_TOKEN)
+
+    llm = LLM(
+        model=cfg.model_name,
+        dtype="auto",                      
+        max_model_len=cfg.max_seq_length,
+        gpu_memory_utilization=0.90,
+        limit_mm_per_prompt={"image": 0},  
+        trust_remote_code=True,
     )
-    
-    if hasattr(tokenizer, "tokenizer"):
-        tokenizer = tokenizer.tokenizer
 
     process_chunks(cfg.chunks_path, cfg.filtered_path,
-                   cfg.final_chunks_path, cfg.token_threshold)
+                    cfg.final_chunks_path, cfg.token_threshold)
 
     chunks = load_jsonl(cfg.final_chunks_path)
     prompts = create_prompts(chunks, tokenizer)
-    check_prompt_lengths(chunks, prompts, tokenizer, cfg.max_input_tokens)
     chunks_sorted, prompts_sorted = sort_prompts(chunks, prompts)
 
     batch_qa_generation(
         chunks=chunks_sorted,
         prompts=prompts_sorted,
-        model=model,
-        tokenizer=tokenizer,
+        llm=llm,
         cfg=cfg,
     )
 
