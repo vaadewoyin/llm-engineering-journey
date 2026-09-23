@@ -49,7 +49,7 @@ class QAConfig:
 @dataclass
 class JudgeConfig:
     project_name: str = "llm-engineering-journey-data-judge"
-    model_name:   str = "unsloth/phi-4"
+    model_name:   str = "unsloth/gemma-4-26B-A4B-it"
     workspace:    str = "vaadewoyin"
 
     max_seq_length:   int = 6144
