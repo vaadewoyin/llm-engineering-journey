@@ -14,14 +14,14 @@ DATA_DIR = ROOT / "data"
 class QAConfig:
     # project 
     project_name: str = "llm-engineering-journey-data-gen"
-    model_name:   str = "unsloth/Qwen3.8-27B-FP8"
+    model_name:   str = "Qwen/Qwen3.8-27B-FP8"
     workspace:    str = "vaadewoyin"
 
     # context / generation 
     max_seq_length:     int = 6144
     max_input_tokens:   int = 4096
     max_new_tokens:     int = 512
-    batch_size:         int = 4
+    batch_size:         int = 256       # checkpoint chunk size, not a hardware limit
 
     # filtering
     token_threshold: int = 150
@@ -49,13 +49,13 @@ class QAConfig:
 @dataclass
 class JudgeConfig:
     project_name: str = "llm-engineering-journey-data-judge"
-    model_name:   str = "unsloth/gemma-4-26B-A4B-it"
+    model_name:   str = "google/gemma-4-26B-A4B-it"
     workspace:    str = "vaadewoyin"
 
     max_seq_length:   int = 6144
     max_input_tokens: int = 4096
     max_new_tokens:   int = 256
-    batch_size:       int = 4
+    batch_size:       int = 256 # checkpoint chunk size, not a hardware limit
 
     temperature: float = 0
     top_p:       float = 1
