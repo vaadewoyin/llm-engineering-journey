@@ -22,7 +22,7 @@ from prompts import QA_GENERATION_SYSTEM_PROMPT as SYSTEM_PROMPT
 # Config & secrets
 load_dotenv()
 COMET_ML_KEY = os.getenv("COMET_API_KEY")
-
+HF_TOKEN =  os.getenv("HF_TOKEN")
 CFG = QAConfig() 
 
 
@@ -267,7 +267,11 @@ def run_pipeline(cfg: QAConfig = CFG):
         dtype=None,
         load_in_4bit=False,   # FP8 model is already quantized,
         device_map="auto",
+        token=HF_TOKEN
     )
+    
+    if hasattr(tokenizer, "tokenizer"):
+        tokenizer = tokenizer.tokenizer
 
     process_chunks(cfg.chunks_path, cfg.filtered_path,
                    cfg.final_chunks_path, cfg.token_threshold)

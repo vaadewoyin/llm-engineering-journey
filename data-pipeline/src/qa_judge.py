@@ -21,6 +21,7 @@ from prompts import QA_JUDGE_SYSTEM_PROMPT as JUDGE_SYSTEM_PROMPT
 
 load_dotenv()
 COMET_ML_KEY = os.getenv("COMET_API_KEY")
+HF_TOKEN =  os.getenv("HF_TOKEN")
 JUDGE_CFG = JudgeConfig()
 
 
@@ -209,7 +210,11 @@ def run_pipeline(cfg: JudgeConfig = JUDGE_CFG):
         dtype=None,
         load_in_4bit=True,
         device_map="auto",
+        token = HF_TOKEN
     )
+
+    if hasattr(tokenizer, "tokenizer"):
+        tokenizer = tokenizer.tokenizer
 
     qa_pairs = load_jsonl(cfg.qa_pairs_path)
     prompts = create_qa_prompts(qa_pairs, tokenizer)
