@@ -246,8 +246,9 @@ def run_pipeline(cfg: QAConfig = CFG):
         model=cfg.model_name,
         dtype="auto",                      
         max_model_len=cfg.max_seq_length,
-        gpu_memory_utilization=0.90,
-        limit_mm_per_prompt={"image": 0},  
+        gpu_memory_utilization=0.85,
+        limit_mm_per_prompt={"image": 0, "video": 0},  
+        max_num_seqs=64,
         trust_remote_code=True,
     )
 
