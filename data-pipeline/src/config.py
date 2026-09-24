@@ -18,8 +18,7 @@ class QAConfig:
     workspace:    str = "vaadewoyin"
 
     # context / generation 
-    max_seq_length:     int = 6144
-    max_input_tokens:   int = 4096
+    max_seq_length:     int = 8192
     max_new_tokens:     int = 512
     batch_size:         int = 256       # checkpoint chunk size, not a hardware limit
 
@@ -52,8 +51,7 @@ class JudgeConfig:
     model_name:   str = "google/gemma-4-26B-A4B-it"
     workspace:    str = "vaadewoyin"
 
-    max_seq_length:   int = 6144
-    max_input_tokens: int = 4096
+    max_seq_length:   int = 8192
     max_new_tokens:   int = 256
     batch_size:       int = 256 # checkpoint chunk size, not a hardware limit
 
