@@ -5,16 +5,20 @@ answer quality, and technical accuracy, and routes the result to keep,
 borderline, or reject. Output is written as JSONL.
 """
 
-import json
+# Env: must be set before vllm is imported
 import os
+os.environ.setdefault("VLLM_USE_FLASHINFER_SAMPLER", "0")
+
+# Imports
+import json
 import re
 from itertools import islice
 
-from vllm import LLM, SamplingParams
+from dotenv import load_dotenv
+from vllm import LLM, SamplingParams  
 from transformers import AutoTokenizer
 import opik
 from opik import track
-from dotenv import load_dotenv
 
 from config import JudgeConfig
 from prompts import QA_JUDGE_SYSTEM_PROMPT as JUDGE_SYSTEM_PROMPT
@@ -204,7 +208,7 @@ def run_pipeline(cfg: JudgeConfig = JUDGE_CFG):
         max_model_len=cfg.max_seq_length,
         gpu_memory_utilization=0.9,
         limit_mm_per_prompt={"image": 0, "video": 0},  
-        max_num_seqs=64, 
+        max_num_seqs=192, 
         trust_remote_code=True,
     )
 

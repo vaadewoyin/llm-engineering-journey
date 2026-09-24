@@ -4,17 +4,20 @@ Loads a quantized Qwen3 model via vLLM, builds chat-templated prompts for
 each chunk, and generates one grounded QA pair per chunk.
 """
 
+# Env: must be set before vllm is imported
+import os
+os.environ.setdefault("VLLM_USE_FLASHINFER_SAMPLER", "0")
+
 # Imports
 import json
-import os
 import re
 from itertools import islice
 
-from vllm import LLM, SamplingParams
+from dotenv import load_dotenv
+from vllm import LLM, SamplingParams  
 from transformers import AutoTokenizer
 import opik
 from opik import track
-from dotenv import load_dotenv
 
 from config import QAConfig
 from prompts import QA_GENERATION_SYSTEM_PROMPT as SYSTEM_PROMPT
@@ -60,13 +63,20 @@ def extract_json_array(text):
 
 
 # Prompt building
-def build_user_prompt(chunk_text):
+def build_user_prompt(chunk_text, paper_title=None):
+    title_block = (
+        f"<paper_title>\n{paper_title}\n</paper_title>\n\n"
+        if paper_title else ""
+    )
+
     return f"""
 Analyze the following scientific chunk according to your instructions.
 
-<
+{title_block}
+
+<scientific_chunk>
 {chunk_text}
->>>
+</scientific_chunk>
 """
 
 
@@ -124,7 +134,8 @@ def create_prompts(chunks, tokenizer):
     prompts = []
     for chunk in chunks:
         chunk_text = chunk["text"]
-        user_prompt = build_user_prompt(chunk_text)
+        chunk_paper_title = chunk["paper_title"]
+        user_prompt = build_user_prompt(chunk_text, paper_title=chunk_paper_title)
         messages = [
             {"role": "system", "content": SYSTEM_PROMPT},
             {"role": "user", "content": user_prompt},
@@ -246,9 +257,9 @@ def run_pipeline(cfg: QAConfig = CFG):
         model=cfg.model_name,
         dtype="auto",                      
         max_model_len=cfg.max_seq_length,
-        gpu_memory_utilization=0.85,
+        gpu_memory_utilization=0.9,
         limit_mm_per_prompt={"image": 0, "video": 0},  
-        max_num_seqs=64,
+        max_num_seqs=192,
         trust_remote_code=True,
     )
 
