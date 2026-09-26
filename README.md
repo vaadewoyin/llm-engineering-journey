@@ -10,29 +10,29 @@
 
 ## 📌 Overview
 
-This repository documents a structured **13‑week journey** into LLM engineering, focusing on:
+This repository documents a structured, module-based journey into LLM engineering, focusing on:
 
 - **Foundations**: PyTorch training loops, attention mechanisms, transformers from scratch.
 - **Fine‑tuning & Alignment**: LoRA, QLoRA, SFT, DPO, preference learning.
 - **Retrieval & Agents**: RAG pipelines, vector databases, agentic workflows.
 - **Production & MLOps**: Model serving, observability, CI/CD, containerization.
 
-Each week has its own folder with a complete project – code, experiments, logs, and post‑mortems.
+Each module has its own folder with a complete project – code, experiments, logs, and post‑mortems. Folders use serial numbers (e.g., `01-mlp-trainer`, `02-transformer-from-scratch`) rather than week numbers, so the pace stays flexible.
 
 ---
 
-## 📊 Projects (weeks 1–5)
+## 📊 Projects (Modules 1–6)
 
-| Week | Project                  | Key Skills & Tools                                                                 |
-| :--- | :----------------------- | :--------------------------------------------------------------------------------- |
-| 1    | MLP Trainer              | PyTorch training loop, Typer CLI, reproducibility, 94% accuracy on CoverType.      |
-| 2    | Transformer From Scratch | Scaled dot‑product attention, multi‑head, positional encoding, sentence classification. |
-| 3    | LLM Inference CLI        | Hugging Face pipelines, streaming generation, `--compare` flag, token efficiency benchmark. |
-| 4    | ArXiv QA Dataset         | Synthetic dataset generation: ArXiv API, Unsloth + Llama‑3‑8B (4‑bit), ChatML, Comet ML & Opik, quality filtering, Hugging Face Hub. |
-| 5    | SFT on ArXiv QA          | LoRA‑based Supervised Fine‑Tuning (Qwen2.5‑1.5B), learning rate comparison (1e‑4 vs 3e‑4), Comet ML logging, checkpointing, qualitative rubric evaluation, POSTMORTEM. |
-| 6    | LoRA Rank Analysis       | Rank sweep (r=8,16,32,64) on filtered 703‑pair dataset, inflection point identification (r=16 optimal), perplexity comparison,  Comet ML logging. |
+| Module | Project                  | Key Skills & Tools                                                                 |
+| :----- | :----------------------- | :--------------------------------------------------------------------------------- |
+| 01     | MLP Trainer              | PyTorch training loop, Typer CLI, reproducibility, 94% accuracy on CoverType.      |
+| 02     | Transformer From Scratch | Scaled dot‑product attention, multi‑head, positional encoding, sentence classification. |
+| 03     | LLM Inference CLI        | Hugging Face pipelines, streaming generation, `--compare` flag, token efficiency benchmark. |
+| 04     | ArXiv QA Dataset         | Synthetic dataset generation: ArXiv API, Unsloth + Llama‑3‑8B (4‑bit), ChatML, Comet ML & Opik, quality filtering, Hugging Face Hub. |
+| 05     | SFT on ArXiv QA          | LoRA‑based Supervised Fine‑Tuning (Qwen2.5‑1.5B), learning rate comparison (1e‑4 vs 3e‑4), Comet ML logging, checkpointing, qualitative rubric evaluation, POSTMORTEM. |
+| 06     | LoRA Rank Analysis       | Rank sweep (r=8,16,32,64) on filtered 703‑pair dataset, inflection point identification (r=16 optimal), perplexity comparison, Comet ML logging. |
 
-*More weeks will be added as the journey progresses (LoRA rank analysis, QLoRA, DPO, RAG, agentic systems).*
+*More modules will be added as the journey progresses (QLoRA, DPO, RAG, agentic systems, serving).*
 
 ---
 
@@ -53,4 +53,6 @@ Each week has its own folder with a complete project – code, experiments, logs
 ```bash
 git clone https://github.com/vaadewoyin/llm-engineering-journey.git
 cd llm-engineering-journey
-# Each week folder contains its own pyproject.toml and README with specific instructions.
+# Each module folder contains its own pyproject.toml and README with specific instructions.
+# Example: cd 01-mlp-trainer
+```
