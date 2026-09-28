@@ -57,3 +57,5 @@ week-*/outputs/*.csv
 
 # Temp / scratch
 t --objects --all | 
+
+outputs/
