@@ -1,15 +1,11 @@
-"""Clean judged QA pairs and write the kept pairs to a new JSONL file.
+"""Clean generated QA pairs using judge verdicts as a filter.
 
-Keeps only rows where `decision` equals "keep" label, drops
-duplicates on (paper_id, question), and writes the result to
-`data/cleaned/pairs_clean.jsonl`.
-
-Output is JSONL, one object per line, ready for make_splits.py.
+Keep generated pairs whose (paper_id, question) key is marked "keep" in
+the judged pairs.
 """
 
 import json
 import re
-
 from config import SplitConfig
 
 
@@ -18,10 +14,14 @@ SPLIT_CFG = SplitConfig()
 
 # Normalization
 def normalize(text):
-    """Lowercase, strip, and collapse internal whitespace."""
     return re.sub(r"\s+", " ", str(text).strip().lower())
 
 
+def make_key(row, fields):
+    return tuple(normalize(row.get(f, "")) for f in fields)
+
+
+# IO helpers
 def load_jsonl(file_path):
     with open(file_path, "r", encoding="utf-8") as f:
         lines = f.readlines()
@@ -35,19 +35,29 @@ def write_jsonl(path, rows):
             f.write(json.dumps(row, ensure_ascii=False) + "\n")
 
 
-# Cleaning
-def clean_pairs(rows, cfg: SplitConfig):
+# Filtering
+def keep_keys(judged_rows, cfg):
+    keys = set()
+    for row in judged_rows:
+        if row.get("decision") != cfg.keep_decision:
+            continue
+        keys.add(make_key(row, cfg.dedup_on))
+    return keys
+
+
+def filter_generated(qa_rows, keys, cfg):
     kept = []
-    dropped_decision = 0
+    dropped_no_keep = 0
     dropped_dup = 0
     seen = set()
 
-    for row in rows:
-        if row.get("decision") != cfg.keep_decision:
-            dropped_decision += 1
+    for row in qa_rows:
+        key = make_key(row, cfg.dedup_on)
+
+        if key not in keys:
+            dropped_no_keep += 1
             continue
 
-        key = tuple(normalize(row.get(k, "")) for k in cfg.dedup_on)
         if key in seen:
             dropped_dup += 1
             continue
@@ -55,22 +65,25 @@ def clean_pairs(rows, cfg: SplitConfig):
 
         kept.append(row)
 
-    return kept, dropped_decision, dropped_dup
+    return kept, dropped_no_keep, dropped_dup
 
 
 # Pipeline
-def main(cfg: SplitConfig = SPLIT_CFG):
-    rows = load_jsonl(cfg.judged_pairs_path)
-    print(f"Loaded {len(rows)} raw judged pairs from {cfg.judged_pairs_path}")
+def run_pipeline(cfg=SPLIT_CFG):
+    qa_rows = load_jsonl(cfg.qa_pairs_path)
+    judged_rows = load_jsonl(cfg.judged_pairs_path)
+    print(f"Loaded: {len(qa_rows)} generated | {len(judged_rows)} judged")
 
-    kept, dropped_decision, dropped_dup = clean_pairs(rows, cfg)
+    keys = keep_keys(judged_rows, cfg)
+    print(f"Keep keys from judge: {len(keys)}")
 
+    kept, dropped_no_keep, dropped_dup = filter_generated(qa_rows, keys, cfg)
     write_jsonl(cfg.clean_pairs_path, kept)
 
     print(f"Kept: {len(kept)}")
-    print(f"Dropped: {dropped_decision} decision, {dropped_dup} duplicates")
-    print(f"Saved clean judged pairs: {cfg.clean_pairs_path}")
+    print(f"Dropped: {dropped_no_keep} not in judge keep, {dropped_dup} duplicates")
+    print(f"Saved clean QA pairs: {cfg.clean_pairs_path}")
 
 
 if __name__ == "__main__":
-    main()
+    run_pipeline()
