@@ -81,17 +81,12 @@ class JudgeConfig:
 
 @dataclass
 class SplitConfig:
-    # input — judged_qa_pairs
-    judged_pairs_path: Path = DATA_DIR / "judged_qa_pairs.jsonl"
-
-    # outputs 
-    clean_pairs_path: Path = DATA_DIR / "cleaned" / "pairs_clean.jsonl"
-    splits_dir:       Path = DATA_DIR / "splits"
-
-     # cleaning rules — keep only rows the judge labeled "keep"
+    qa_pairs_path:     Path = DATA_DIR / "qa_pairs.jsonl"       
+    judged_pairs_path: Path = DATA_DIR / "judged_qa_pairs.jsonl" 
+    clean_pairs_path:  Path = DATA_DIR / "cleaned" / "pairs_clean.jsonl"
+    splits_dir:        Path = DATA_DIR / "splits"
     keep_decision:     str   = "keep"
     dedup_on:          tuple[str, ...] = ("paper_id", "question")
-
     split_seed:        int  = 42
     split_proportions: dict = field(default_factory=lambda: {"train": 0.8, "val": 0.2})
     split_by:          str  = "paper_id"
