@@ -17,22 +17,22 @@ This repository documents a structured, module-based journey into LLM engineerin
 - **Retrieval & Agents**: RAG pipelines, vector databases, agentic workflows.
 - **Production & MLOps**: Model serving, observability, CI/CD, containerization.
 
-Each module has its own folder with a complete project – code, experiments, logs, and post‑mortems. Folders use serial numbers (e.g., `01-mlp-trainer`, `02-transformer-from-scratch`) rather than week numbers, so the pace stays flexible.
-
+Each module has its own folder with a complete project – code, experiments, logs, and post‑mortems. Folders use serial numbers (e.g., `01-mlp-trainer`, `02-transformer-from-scratch`).
 ---
 
-## 📊 Projects (Modules 1–6)
+## 📊 Projects (Modules 1–7)
 
-| Module | Project                  | Key Skills & Tools                                                                 |
-| :----- | :----------------------- | :--------------------------------------------------------------------------------- |
-| 01     | MLP Trainer              | PyTorch training loop, Typer CLI, reproducibility, 94% accuracy on CoverType.      |
-| 02     | Transformer From Scratch | Scaled dot‑product attention, multi‑head, positional encoding, sentence classification. |
-| 03     | LLM Inference CLI        | Hugging Face pipelines, streaming generation, `--compare` flag, token efficiency benchmark. |
-| 04     | ArXiv QA Dataset         | Synthetic dataset generation: ArXiv API, Unsloth + Llama‑3‑8B (4‑bit), ChatML, Comet ML & Opik, quality filtering, Hugging Face Hub. |
-| 05     | SFT on ArXiv QA          | LoRA‑based Supervised Fine‑Tuning (Qwen2.5‑1.5B), learning rate comparison (1e‑4 vs 3e‑4), Comet ML logging, checkpointing, qualitative rubric evaluation, POSTMORTEM. |
-| 06     | LoRA Rank Analysis       | Rank sweep (r=8,16,32,64) on filtered 703‑pair dataset, inflection point identification (r=16 optimal), perplexity comparison, Comet ML logging. |
+| Module | Project                        | Key Skills & Tools                                                                 |
+| :----- | :----------------------------- | :--------------------------------------------------------------------------------- |
+| 01     | MLP Trainer                    | PyTorch training loop, Typer CLI, reproducibility, 94% accuracy on CoverType.      |
+| 02     | Transformer From Scratch       | Scaled dot‑product attention, multi‑head, positional encoding, sentence classification. |
+| 03     | LLM Inference CLI              | Hugging Face pipelines, streaming generation, `--compare` flag, token efficiency benchmark. |
+| 04     | ArXiv QA Dataset               | Synthetic dataset generation: ArXiv API, Unsloth + Llama‑3‑8B (4‑bit), ChatML, Comet ML & Opik, quality filtering, Hugging Face Hub. |
+| 05     | SFT on ArXiv QA                | LoRA‑based Supervised Fine‑Tuning (Qwen2.5‑1.5B), learning rate comparison (1e‑4 vs 3e‑4), Comet ML logging, checkpointing, qualitative rubric evaluation, POSTMORTEM. |
+| 06     | LoRA Rank Analysis             | Rank sweep (r=8,16,32,64) on filtered 703‑pair dataset, inflection point identification (r=16 optimal), perplexity comparison, Comet ML logging. |
+| 07     | Efficient Fine‑Tuning Analysis | Full FT vs LoRA‑r16 vs QLoRA‑NF4 on Qwen3‑1.7B and Qwen3‑8B, memory profiling (`@profile_memory`), fp16 vs bf16 on T4, 3‑way comparison table, locked eval config + rubric, POSTMORTEM. |
 
-*More modules will be added as the journey progresses (QLoRA, DPO, RAG, agentic systems, serving).*
+*More modules will be added as the journey progresses (DPO, RAG, agentic systems, serving).*
 
 ---
 
@@ -44,7 +44,7 @@ Each module has its own folder with a complete project – code, experiments, lo
 | **Fine‑tuning**   | Unsloth, TRL, PEFT, bitsandbytes, Comet ML, Opik                      |
 | **RAG & Agents**  | *Coming soon* – Qdrant, LangGraph, RAGAS, Gradio                      |
 | **Serving**       | *Coming soon* – vLLM, FastAPI, Docker                                 |
-| **Quality & CI**  | Ruff, pre‑commit, pytest, uv (package manager), Kaggle/Colab GPU      |
+| **Quality & CI**  | Ruff, pre‑commit, pytest, uv (package manager), Kaggle/Colab GPU, Modal |
 
 ---
 
@@ -55,4 +55,3 @@ git clone https://github.com/vaadewoyin/llm-engineering-journey.git
 cd llm-engineering-journey
 # Each module folder contains its own pyproject.toml and README with specific instructions.
 # Example: cd 01-mlp-trainer
-```
