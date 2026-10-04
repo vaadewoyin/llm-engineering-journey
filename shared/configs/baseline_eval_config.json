@@ -1,0 +1,10 @@
+{
+  "experiment_seed": 42,
+  "data_train_split_ratio": 0.8,
+  "eval_set_path": "outputs/eval_set.json",
+  "hardware": {
+    "device": "cuda",
+    "gpu": "T4x2",
+    "compute_dtype": "fp16"
+  }
+}
