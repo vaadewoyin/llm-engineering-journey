@@ -3,15 +3,14 @@
 from datasets import load_dataset
 
 
-def prepare_dataset(hf_train_link: str, hf_eval_link: str):
-    """Load the train and eval HF datasets."""
-    train = load_dataset(hf_train_link, split="train")
-    eval = load_dataset(hf_eval_link, split="train")
-    return train, eval
+def prepare_dataset(hf_repo: str):
+    """Load train and validation splits from the HF dataset repo."""
+    train = load_dataset(hf_repo, split="train")
+    val = load_dataset(hf_repo, split="validation")
+    return train, val
 
 
 def build_message(row):
-    """Convert row's question/answer columns into a chat-format message list."""
     return [
         {"role": "user", "content": row["question"]},
         {"role": "assistant", "content": row["answer"]},
@@ -19,7 +18,7 @@ def build_message(row):
 
 
 def format_chat(tokenizer, dataset):
-    """Apply the model's chat template to every row."""
+    """Apply the model's chat template for every row."""
 
     def build_prompt(row):
         messages = build_message(row)
