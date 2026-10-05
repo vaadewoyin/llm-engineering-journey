@@ -6,8 +6,8 @@ from pathlib import Path
 import comet_ml
 import torch
 from dotenv import load_dotenv
-from trl import SFTConfig, SFTTrainer
 from unsloth import FastLanguageModel
+from trl import SFTConfig, SFTTrainer
 
 from shared.config import load_baseline_eval_config
 from shared.data import format_chat, prepare_dataset
