@@ -5,9 +5,10 @@ from pathlib import Path
 
 import comet_ml
 import torch
+import unsloth
 from dotenv import load_dotenv
-from unsloth import FastLanguageModel
 from trl import SFTConfig, SFTTrainer
+from unsloth import FastLanguageModel
 
 from shared.config import load_baseline_eval_config
 from shared.data import format_chat, prepare_dataset
@@ -56,7 +57,7 @@ def main():
         model, tokenizer = FastLanguageModel.from_pretrained(
             model_name=CONFIG["model_name"],
             max_seq_length=CONFIG["max_seq_length"],
-            dtype=None,
+            dtype=torch.bfloat16,
             load_in_4bit=CONFIG["load_in_4bit"],
             use_gradient_checkpointing=True,
         )
@@ -69,7 +70,7 @@ def main():
         run_name=CONFIG["run_name"],
         report_to=["comet_ml"],
         dataset_text_field="text",
-        max_seq_length=CONFIG["max_seq_length"],
+        max_length=CONFIG["max_seq_length"],
         per_device_train_batch_size=CONFIG["batch_size"],
         gradient_accumulation_steps=CONFIG["grad_accum"],
         num_train_epochs=CONFIG["epochs"],
@@ -79,8 +80,8 @@ def main():
         max_grad_norm=CONFIG["max_grad_norm"],
         optim=CONFIG["optim"],
         lr_scheduler_type=CONFIG["lr_scheduler"],
-        fp16=not torch.cuda.is_bf16_supported(),
-        bf16=torch.cuda.is_bf16_supported(),
+        fp16=False,
+        bf16=True,
         logging_steps=CONFIG["logging_steps"],
         save_steps=CONFIG["save_steps"],
         eval_strategy="steps",
