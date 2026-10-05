@@ -4,6 +4,11 @@ version = "0.1.0"
 description = "Shared configs, paths, and utilities across LLM engineering modules"
 requires-python = ">=3.12"
 
+dependencies = [
+    "datasets",
+    "torch",
+]
+
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
