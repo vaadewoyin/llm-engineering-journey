@@ -5,5 +5,21 @@ description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
+    "accelerate>=1.14.0",
+    "bitsandbytes>=0.49.2",
+    "comet-ml>=3.58.7",
+    "datasets>=4.3.0",
+    "matplotlib>=3.11.2",
+    "matplotlib-inline>=0.2.2",
+    "pandas>=3.0.3",
+    "peft>=0.19.1",
+    "python-dotenv>=1.2.4",
+    "shared",
+    "torch>=2.10.0",
+    "transformers>=5.5.0",
+    "trl>=0.24.0",
     "unsloth>=2026.6.9",
 ]
+
+[tool.uv.sources]
+shared = { path = "../shared", editable = true }
