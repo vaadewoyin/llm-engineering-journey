@@ -1,7 +1,7 @@
 [project]
-name = "week-07-efficient-finetuning-analysis"
+name = "efficient-finetuning-analysis"
 version = "0.1.0"
-description = "Add your description here"
+description = "Full FT vs LoRA vs QLoRA benchmark on Qwen3 models"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
