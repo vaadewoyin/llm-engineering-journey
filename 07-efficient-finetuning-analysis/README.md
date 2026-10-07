@@ -13,7 +13,7 @@ Three fine-tuning methods, same dataset:
 |---|---|---|
 | Full FT | Qwen3-1.7B | 1.41B (82%) — measured |
 | LoRA r=16 | Qwen3-1.7B | ~18M — estimated from r × (in+out) |
-| QLoRA-NF4 | Qwen3-8B | ~50M — estimated from r × (in+out) |
+| QLoRA-NF4 | Qwen3-8B | ~45M — estimated from r × (in+out) |
 
 ## Dataset
 
