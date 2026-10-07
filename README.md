@@ -18,6 +18,18 @@ This repository documents a structured, module-based journey into LLM engineerin
 - **Production & MLOps**: Model serving, observability, CI/CD, containerization.
 
 Each module has its own folder with a complete project – code, experiments, logs, and post‑mortems. Folders use serial numbers (e.g., `01-mlp-trainer`, `02-transformer-from-scratch`).
+
+---
+
+## 📦 Supporting Artifacts
+
+Shared infrastructure and data pipelines used across modules:
+
+| Artifact                      | Purpose                                                                                                    |
+| :---------------------------- | :--------------------------------------------------------------------------------------------------------- |
+| `shared/`                     | Installable package with locked eval config, paths, memory profiling, and dataset helpers used by every training module. |
+| `concrete-papers-data-pipeline/` | Data pipeline that generates QA pairs from concrete-materials papers — source of the fine-tuning dataset used in Modules 04–07. |
+
 ---
 
 ## 📊 Projects (Modules 1–7)
@@ -30,7 +42,7 @@ Each module has its own folder with a complete project – code, experiments, lo
 | 04     | ArXiv QA Dataset               | Synthetic dataset generation: ArXiv API, Unsloth + Llama‑3‑8B (4‑bit), ChatML, Comet ML & Opik, quality filtering, Hugging Face Hub. |
 | 05     | SFT on ArXiv QA                | LoRA‑based Supervised Fine‑Tuning (Qwen2.5‑1.5B), learning rate comparison (1e‑4 vs 3e‑4), Comet ML logging, checkpointing, qualitative rubric evaluation, POSTMORTEM. |
 | 06     | LoRA Rank Analysis             | Rank sweep (r=8,16,32,64) on filtered 703‑pair dataset, inflection point identification (r=16 optimal), perplexity comparison, Comet ML logging. |
-| 07     | Efficient Fine‑Tuning Analysis | Full FT vs LoRA‑r16 vs QLoRA‑NF4 on Qwen3‑1.7B and Qwen3‑8B, memory profiling (`@profile_memory`), fp16 vs bf16 on T4, 3‑way comparison table, locked eval config + rubric, POSTMORTEM. |
+| 07     | Efficient Fine‑Tuning Analysis | Full FT vs LoRA‑r16 vs QLoRA‑NF4 on Qwen3‑1.7B and Qwen3‑8B, memory profiling (`@profile_memory`), 3‑way comparison table. |
 
 *More modules will be added as the journey progresses (DPO, RAG, agentic systems, serving).*
 
