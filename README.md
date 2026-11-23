@@ -3,60 +3,76 @@
 [![Python 3.12+](https://img.shields.io/badge/python-3.12+-blue.svg)](https://www.python.org/downloads/)
 [![GitHub last commit](https://img.shields.io/github/last-commit/vaadewoyin/llm-engineering-journey)](https://github.com/vaadewoyin/llm-engineering-journey)
 
-> Hands‑on LLM engineering from first principles to production.  
-> Built with PyTorch, Hugging Face, Unsloth, and modern MLOps / LLMOps tools.
+> Hands-on LLM engineering from first principles to production.  
+> Built with PyTorch, Hugging Face, Unsloth, and modern LLMOps tools.
 
 ---
 
 ## 📌 Overview
 
-This repository documents a structured, module-based journey into LLM engineering, focusing on:
+This repository documents a structured, project-based journey into LLM engineering, focusing on:
 
-- **Foundations**: PyTorch training loops, attention mechanisms, transformers from scratch.
-- **Fine‑tuning & Alignment**: LoRA, QLoRA, SFT, DPO, preference learning.
-- **Retrieval & Agents**: RAG pipelines, vector databases, agentic workflows.
-- **Production & MLOps**: Model serving, observability, CI/CD, containerization.
+- **Foundations:** PyTorch training loops, attention mechanisms, and transformers from scratch.
+- **Fine-tuning:** Supervised fine-tuning, LoRA, QLoRA, and parameter-efficient training.
+- **Retrieval & Evaluation:** RAG pipelines, vector databases, hybrid search, reranking, and rigorous benchmarking.
+- **Agents & Production:** Agentic workflows, MCP, model serving, observability, CI/CD, and deployment.
 
-Each module has its own folder with a complete project – code, experiments, logs, and post‑mortems. Folders use serial numbers (e.g., `01-mlp-trainer`, `02-transformer-from-scratch`).
+Each module has its own numbered folder containing implementations, experiments, evaluations, and technical documentation.
 
 ---
 
 ## 📦 Supporting Artifacts
 
-Shared infrastructure and data pipelines used across modules:
-
-| Artifact                      | Purpose                                                                                                    |
-| :---------------------------- | :--------------------------------------------------------------------------------------------------------- |
-| `shared/`                     | Installable package with locked eval config, paths, memory profiling, and dataset helpers used by every training module. |
-| `concrete-papers-data-pipeline/` | Data pipeline that generates QA pairs from concrete-materials papers — source of the fine-tuning dataset used in Modules 04–07. |
+| Artifact | Purpose |
+|---|---|
+| `shared/` | Reusable training and evaluation utilities, configurations, and dataset helpers. |
+| `concrete-papers-data-pipeline/` | Research-paper processing and QA dataset generation for concrete-materials fine-tuning experiments. |
 
 ---
 
-## 📊 Projects (Modules 1–7)
+## 📊 Projects
 
-| Module | Project                        | Key Skills & Tools                                                                 |
-| :----- | :----------------------------- | :--------------------------------------------------------------------------------- |
-| 01     | MLP Trainer                    | PyTorch training loop, Typer CLI, reproducibility, 94% accuracy on CoverType.      |
-| 02     | Transformer From Scratch       | Scaled dot‑product attention, multi‑head, positional encoding, sentence classification. |
-| 03     | LLM Inference CLI              | Hugging Face pipelines, streaming generation, `--compare` flag, token efficiency benchmark. |
-| 04     | ArXiv QA Dataset               | Synthetic dataset generation: ArXiv API, Unsloth + Llama‑3‑8B (4‑bit), ChatML, Comet ML & Opik, quality filtering, Hugging Face Hub. |
-| 05     | SFT on ArXiv QA                | LoRA‑based Supervised Fine‑Tuning (Qwen2.5‑1.5B), learning rate comparison (1e‑4 vs 3e‑4), Comet ML logging, checkpointing, qualitative rubric evaluation, POSTMORTEM. |
-| 06     | LoRA Rank Analysis             | Rank sweep (r=8,16,32,64) on filtered 703‑pair dataset, inflection point identification (r=16 optimal), perplexity comparison, Comet ML logging. |
-| 07     | Efficient Fine‑Tuning Analysis | Full FT vs LoRA‑r16 vs QLoRA‑NF4 on Qwen3‑1.7B and Qwen3‑8B, memory profiling (`@profile_memory`), 3‑way comparison table. |
+### Completed Modules (01–07)
 
-*More modules will be added as the journey progresses (DPO, RAG, agentic systems, serving).*
+| Module | Project | Key Skills & Tools |
+|---|---|---|
+| 01 | MLP Trainer | PyTorch training loops, Typer CLI, reproducibility, CoverType classification. |
+| 02 | Transformer From Scratch | Scaled dot-product attention, multi-head attention, positional encoding, sequence classification. |
+| 03 | LLM Inference CLI | Hugging Face pipelines, streaming generation, model comparison, inference benchmarking. |
+| 04 | ArXiv QA Dataset | Synthetic QA generation, quality filtering, dataset preparation, experiment tracking. |
+| 05 | SFT Experiment | Qwen2.5-1.5B, LoRA fine-tuning, learning-rate comparison, qualitative evaluation. |
+| 06 | LoRA Rank Analysis | Rank sweep (r=8, 16, 32, 64), perplexity comparison, efficiency analysis. |
+| 07 | Efficient Fine-Tuning Analysis | Qwen3-1.7B, Qwen3-8B, LoRA, QLoRA, memory profiling, comparative evaluation. |
+
+### Current Roadmap (08–14)
+
+| Module | Project | Key Skills & Tools | Status |
+|---|---|---|---|
+| 08 | Alignment & Preference Optimization | DPO, preference learning, alignment evaluation | Deferred |
+| 09 | Retrieval-Augmented Generation System | Embeddings, chunking, Qdrant, retrieval, source grounding | In Progress |
+| 10 | RAG Evaluation & Benchmarking | BM25, hybrid search, reranking, RAGAS, bootstrap confidence intervals | Planned |
+| 11 | LLM Inference & Serving | FastAPI, asynchronous Python, Docker, latency and load testing | Planned |
+| 12 | Agentic Workflows & MCP | LangGraph, MCP tools, deterministic routing, guardrails, evaluation | Planned |
+| 13 | Production Deployment & MLOps | Modal, GitHub Actions, observability, cost controls, deployment | Planned |
+| 14 | Portfolio & Applications | Reproducible demonstrations, technical documentation, portfolio preparation | Planned |
+
+*Current development focuses on an integrated research-grounded RAG and agentic system for sustainable and alternative concrete materials.*
 
 ---
 
 ## 🛠️ Tools & Technologies
 
-| Category          | Tools                                                                 |
-| :---------------- | :-------------------------------------------------------------------- |
-| **Core**          | Python 3.12+, PyTorch, Hugging Face Transformers, Datasets            |
-| **Fine‑tuning**   | Unsloth, TRL, PEFT, bitsandbytes, Comet ML, Opik                      |
-| **RAG & Agents**  | *Coming soon* – Qdrant, LangGraph, RAGAS, Gradio                      |
-| **Serving**       | *Coming soon* – vLLM, FastAPI, Docker                                 |
-| **Quality & CI**  | Ruff, pre‑commit, pytest, uv (package manager), Kaggle/Colab GPU, Modal |
+| Category | Tools |
+|---|---|
+| Core | Python 3.12+, PyTorch, Hugging Face Transformers, Datasets |
+| Fine-tuning | Unsloth,  Comet ML |
+| RAG & Evaluation | Qdrant, BM25, RAGAS, pytest |
+| Agents | LangGraph, MCP |
+| Serving & Deployment | FastAPI, Docker, Modal, GitHub Actions |
+| Observability | Opik, Comet ML |
+| Development | Git, GitHub, VS Code, uv |
+
+*Some technologies are scheduled for upcoming modules.*
 
 ---
 
@@ -65,5 +81,8 @@ Shared infrastructure and data pipelines used across modules:
 ```bash
 git clone https://github.com/vaadewoyin/llm-engineering-journey.git
 cd llm-engineering-journey
-# Each module folder contains its own pyproject.toml and README with specific instructions.
-# Example: cd 01-mlp-trainer
+
+# Each module has its own implementation and setup instructions.
+# Example:
+cd 01-mlp-trainer
+```
